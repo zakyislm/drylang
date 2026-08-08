@@ -6,7 +6,7 @@ dryLang is a minimalist, dynamically-typed programming language designed for max
 
 ## Quick Example
 
-```
+```rs
 .Hello World in dryLang.
 name "Zaky"
 age 17
