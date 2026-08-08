@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "Jax The Reporter": {
+      "source": "zakyislm/jax",
+      "sourceType": "github",
+      "skillPath": "raw/jax/SKILL.md",
+      "computedHash": "dc222d209e4c634d88e17751cbe8ad4317f854e2521c8d27a9dbdbe69d654220"
+    }
+  }
+}
