@@ -20,8 +20,9 @@ const (
 	ValBool    = "bool"
 	ValArray   = "array"
 	ValMap     = "map"
-	ValFn      = "fn"
-	ValUnknown = "unknown"
+	ValFn        = "fn"
+	ValStructDef = "struct_def"
+	ValUnknown   = "unknown"
 )
 
 // Value wraps any dryLang runtime value.
@@ -185,7 +186,7 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			case *compiler.CompiledFn:
 				vm.push(FnVal(v))
 			case compiler.StructDef:
-				vm.push(Value{ValMap, map[string]Value{"__struct__": StringVal(v.Name)}})
+				vm.push(Value{ValStructDef, v})
 			default:
 				vm.push(Value{ValUnknown, nil})
 			}
@@ -461,6 +462,21 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 		case compiler.OpCall:
 			argCount := inst.Operand
 			callee := vm.stack[vm.sp-argCount-1]
+
+			if callee.Type == ValStructDef {
+				def := callee.Data.(compiler.StructDef)
+				if argCount != len(def.Fields) {
+					return vm.runtimeErr("E300", line, col, "want %d args for struct", len(def.Fields))
+				}
+				fields := make(map[string]Value)
+				fields["__struct__"] = StringVal(def.Name)
+				for i := 0; i < argCount; i++ {
+					fields[def.Fields[i]] = vm.stack[vm.sp-argCount+i]
+				}
+				vm.sp -= argCount + 1
+				vm.push(Value{ValMap, fields})
+				continue
+			}
 
 			if callee.Type != ValFn {
 				return vm.runtimeErr("E300", line, col, "want fn")
