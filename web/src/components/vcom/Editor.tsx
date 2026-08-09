@@ -112,7 +112,7 @@ export function VcomEditor({ code, onChange }: VcomEditorProps) {
 
     // Auto-complete provider
     monaco.languages.registerCompletionItemProvider('drylang', {
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: any, position: any) => {
         const suggestions = [
           // Snippets for blocks
           {

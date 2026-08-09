@@ -78,7 +78,7 @@ export default function DocsIndex() {
         gap: '1rem'
       }}>
         {prevItem ? (
-          <Link href={`/docs/${prevItem.slug}`} className="docs-nav-link prev">
+          <Link href={`/docs/${(prevItem as any).slug}`} className="docs-nav-link prev">
             <span style={{ fontSize: '0.85rem', color: '#888', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <ArrowLeft width={14} height={14} />
               Previous
@@ -88,7 +88,7 @@ export default function DocsIndex() {
         ) : <div style={{ flex: 1 }} />}
 
         {nextItem ? (
-          <Link href={`/docs/${nextItem.slug}`} className="docs-nav-link next">
+          <Link href={`/docs/${(nextItem as any).slug}`} className="docs-nav-link next">
             <span style={{ fontSize: '0.85rem', color: '#888', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               Next
               <ArrowRight width={14} height={14} />
