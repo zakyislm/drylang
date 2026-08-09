@@ -92,19 +92,22 @@ type Chunk struct {
 	Code      []Instruction
 	Constants []interface{} // string, float64, etc.
 	Lines     []int         // source line for each instruction
+	Cols      []int         // source col for each instruction
 }
 
-func (c *Chunk) Emit(op Opcode, operand int, line int) int {
+func (c *Chunk) Emit(op Opcode, operand int, line, col int) int {
 	idx := len(c.Code)
 	c.Code = append(c.Code, Instruction{Op: op, Operand: operand})
 	c.Lines = append(c.Lines, line)
+	c.Cols = append(c.Cols, col)
 	return idx
 }
 
-func (c *Chunk) Emit2(op Opcode, operand, operand2 int, line int) int {
+func (c *Chunk) Emit2(op Opcode, operand, operand2 int, line, col int) int {
 	idx := len(c.Code)
 	c.Code = append(c.Code, Instruction{Op: op, Operand: operand, Operand2: operand2})
 	c.Lines = append(c.Lines, line)
+	c.Cols = append(c.Cols, col)
 	return idx
 }
 

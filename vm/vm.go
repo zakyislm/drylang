@@ -2,6 +2,7 @@ package vm
 
 import (
 	"drylang/compiler"
+	"drylang/errfmt"
 	"fmt"
 	"math"
 	"math/rand"
@@ -31,11 +32,11 @@ type Value struct {
 
 var UnknownValue = Value{Type: ValUnknown, Data: nil}
 
-func NumberVal(v float64) Value  { return Value{ValNumber, v} }
-func StringVal(v string) Value   { return Value{ValString, v} }
-func BoolVal(v bool) Value       { return Value{ValBool, v} }
-func ArrayVal(v []Value) Value   { return Value{ValArray, v} }
-func MapVal(v map[string]Value) Value { return Value{ValMap, v} }
+func NumberVal(v float64) Value          { return Value{ValNumber, v} }
+func StringVal(v string) Value           { return Value{ValString, v} }
+func BoolVal(v bool) Value               { return Value{ValBool, v} }
+func ArrayVal(v []Value) Value           { return Value{ValArray, v} }
+func MapVal(v map[string]Value) Value    { return Value{ValMap, v} }
 func FnVal(v *compiler.CompiledFn) Value { return Value{ValFn, v} }
 
 func (v Value) String() string {
@@ -96,26 +97,26 @@ func isTruthy(v Value) bool {
 
 // VM executes dryLang bytecode.
 type VM struct {
-	chunk   *compiler.Chunk
-	fns     []*compiler.CompiledFn
-	globals map[string]Value
-	stack   []Value
-	sp      int // stack pointer
-	ip      int // instruction pointer
-	frames  []callFrame
+	chunk    *compiler.Chunk
+	fns      []*compiler.CompiledFn
+	globals  map[string]Value
+	stack    []Value
+	sp       int // stack pointer
+	ip       int // instruction pointer
+	frames   []callFrame
 	tryStack []tryFrame
 }
 
 type callFrame struct {
-	fn     *compiler.CompiledFn
-	ip     int
-	bp     int // base pointer (stack offset)
-	chunk  *compiler.Chunk
+	fn    *compiler.CompiledFn
+	ip    int
+	bp    int // base pointer (stack offset)
+	chunk *compiler.Chunk
 }
 
 type tryFrame struct {
-	catchIP int
-	sp      int
+	catchIP    int
+	sp         int
 	frameDepth int
 }
 
@@ -141,12 +142,17 @@ func (vm *VM) pop() Value {
 	return vm.stack[vm.sp]
 }
 
+func (vm *VM) Update(chunk *compiler.Chunk, fns []*compiler.CompiledFn) {
+	vm.chunk = chunk
+	vm.fns = fns
+}
+
 func (vm *VM) peek() Value {
 	return vm.stack[vm.sp-1]
 }
 
-func (vm *VM) runtimeErr(line int, format string, args ...interface{}) error {
-	return fmt.Errorf("%d:0 %s", line, fmt.Sprintf(format, args...))
+func (vm *VM) runtimeErr(code string, line, col int, format string, args ...interface{}) error {
+	return errfmt.Format(code, line, col, fmt.Sprintf(format, args...))
 }
 
 // Run executes the main chunk.
@@ -161,8 +167,10 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 	for vm.ip < len(chunk.Code) {
 		inst := chunk.Code[vm.ip]
 		line := 0
+		col := 0
 		if vm.ip < len(chunk.Lines) {
 			line = chunk.Lines[vm.ip]
+			col = chunk.Cols[vm.ip]
 		}
 		vm.ip++
 
@@ -201,44 +209,44 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			} else if a.Type == ValNumber && b.Type == ValNumber {
 				vm.push(NumberVal(a.Data.(float64) + b.Data.(float64)))
 			} else {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 
 		case compiler.OpSub:
 			b, a := vm.pop(), vm.pop()
 			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 			vm.push(NumberVal(a.Data.(float64) - b.Data.(float64)))
 
 		case compiler.OpMul:
 			b, a := vm.pop(), vm.pop()
 			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 			vm.push(NumberVal(a.Data.(float64) * b.Data.(float64)))
 
 		case compiler.OpDiv:
 			b, a := vm.pop(), vm.pop()
 			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 			if b.Data.(float64) == 0 {
-				return vm.runtimeErr(line, "div by 0")
+				return vm.runtimeErr("E300", line, col, "div by 0")
 			}
 			vm.push(NumberVal(a.Data.(float64) / b.Data.(float64)))
 
 		case compiler.OpMod:
 			b, a := vm.pop(), vm.pop()
 			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 			vm.push(NumberVal(math.Mod(a.Data.(float64), b.Data.(float64))))
 
 		case compiler.OpNeg:
 			v := vm.pop()
 			if v.Type != ValNumber {
-				return vm.runtimeErr(line, "want number")
+				return vm.runtimeErr("E300", line, col, "want number")
 			}
 			vm.push(NumberVal(-v.Data.(float64)))
 
@@ -302,7 +310,7 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			name := chunk.Constants[inst.Operand].(string)
 			val, ok := vm.globals[name]
 			if !ok {
-				return vm.runtimeErr(line, "unknown %s", name)
+				return vm.runtimeErr("E300", line, col, "unknown %s", name)
 			}
 			vm.push(val)
 
@@ -370,7 +378,7 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				arr := obj.Data.([]Value)
 				i := int(idx.Data.(float64))
 				if i < 0 || i >= len(arr) {
-					return vm.runtimeErr(line, "bounds %d", i)
+					return vm.runtimeErr("E300", line, col, "bounds %d", i)
 				}
 				vm.push(arr[i])
 			case ValMap:
@@ -385,11 +393,11 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				s := obj.Data.(string)
 				i := int(idx.Data.(float64))
 				if i < 0 || i >= len(s) {
-					return vm.runtimeErr(line, "bounds %d", i)
+					return vm.runtimeErr("E300", line, col, "bounds %d", i)
 				}
 				vm.push(StringVal(string(s[i])))
 			default:
-				return vm.runtimeErr(line, "want array|map")
+				return vm.runtimeErr("E300", line, col, "want array|map")
 			}
 
 		case compiler.OpSetIndex:
@@ -401,21 +409,21 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				arr := obj.Data.([]Value)
 				i := int(idx.Data.(float64))
 				if i < 0 || i >= len(arr) {
-					return vm.runtimeErr(line, "bounds %d", i)
+					return vm.runtimeErr("E300", line, col, "bounds %d", i)
 				}
 				arr[i] = val
 			case ValMap:
 				m := obj.Data.(map[string]Value)
 				m[idx.String()] = val
 			default:
-				return vm.runtimeErr(line, "want array|map")
+				return vm.runtimeErr("E300", line, col, "want array|map")
 			}
 
 		case compiler.OpDotGet:
 			field := chunk.Constants[inst.Operand].(string)
 			obj := vm.pop()
 			if obj.Type != ValMap {
-				return vm.runtimeErr(line, "want map")
+				return vm.runtimeErr("E300", line, col, "want map")
 			}
 			m := obj.Data.(map[string]Value)
 			if val, ok := m[field]; ok {
@@ -429,7 +437,7 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			val := vm.pop()
 			obj := vm.pop()
 			if obj.Type != ValMap {
-				return vm.runtimeErr(line, "want map")
+				return vm.runtimeErr("E300", line, col, "want map")
 			}
 			obj.Data.(map[string]Value)[field] = val
 
@@ -455,12 +463,13 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			callee := vm.stack[vm.sp-argCount-1]
 
 			if callee.Type != ValFn {
-				return vm.runtimeErr(line, "want fn")
+				return vm.runtimeErr("E300", line, col, "want fn")
 			}
 
 			fn := callee.Data.(*compiler.CompiledFn)
 			if argCount != fn.ParamCount {
-				return vm.runtimeErr(line, "want %d args", fn.ParamCount)
+				fmt.Printf("DEBUG OpCall: argCount=%d, fn.ParamCount=%d\n", argCount, fn.ParamCount)
+				return vm.runtimeErr("E300", line, col, "want %d args", fn.ParamCount)
 			}
 
 			frame := callFrame{
@@ -533,11 +542,11 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				vm.push(v)
 				vm.ip = tf.catchIP
 			} else {
-				return vm.runtimeErr(line, "%s", v.String())
+				return vm.runtimeErr("E300", line, col, "%s", v.String())
 			}
 
 		case compiler.OpBuiltin:
-			if err := vm.executeBuiltin(compiler.BuiltinID(inst.Operand), inst.Operand2, line); err != nil {
+			if err := vm.executeBuiltin(compiler.BuiltinID(inst.Operand), inst.Operand2, line, col); err != nil {
 				return err
 			}
 
@@ -555,7 +564,7 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 	return nil
 }
 
-func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) error {
+func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int) error {
 	args := make([]Value, argCount)
 	for i := argCount - 1; i >= 0; i-- {
 		args[i] = vm.pop()
@@ -566,7 +575,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 	switch id {
 	case compiler.BuiltinLen:
 		if len(args) != 1 {
-			return vm.runtimeErr(line, "want 1 arg")
+			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
 		switch args[0].Type {
 		case ValString:
@@ -576,21 +585,21 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 		case ValMap:
 			result = NumberVal(float64(len(args[0].Data.(map[string]Value))))
 		default:
-			return vm.runtimeErr(line, "want string|array|map")
+			return vm.runtimeErr("E300", line, col, "want string|array|map")
 		}
 
 	case compiler.BuiltinGet:
 		if len(args) != 1 {
-			return vm.runtimeErr(line, "want 1 arg")
+			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
 		result = StringVal(args[0].Type)
 
 	case compiler.BuiltinAdd:
 		if len(args) != 2 {
-			return vm.runtimeErr(line, "want 2 args")
+			return vm.runtimeErr("E300", line, col, "want 2 args")
 		}
 		if args[0].Type != ValArray {
-			return vm.runtimeErr(line, "want array")
+			return vm.runtimeErr("E300", line, col, "want array")
 		}
 		arr := args[0].Data.([]Value)
 		arr = append(arr, args[1])
@@ -600,65 +609,65 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinNum:
 		if len(args) != 1 {
-			return vm.runtimeErr(line, "want 1 arg")
+			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
 		f, err := strconv.ParseFloat(args[0].String(), 64)
 		if err != nil {
-			return vm.runtimeErr(line, "bad number")
+			return vm.runtimeErr("E300", line, col, "bad number")
 		}
 		result = NumberVal(f)
 
 	case compiler.BuiltinStr:
 		if len(args) != 1 {
-			return vm.runtimeErr(line, "want 1 arg")
+			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
 		result = StringVal(args[0].String())
 
 	case compiler.BuiltinAbs:
 		if len(args) != 1 || args[0].Type != ValNumber {
-			return vm.runtimeErr(line, "want number")
+			return vm.runtimeErr("E300", line, col, "want number")
 		}
 		result = NumberVal(math.Abs(args[0].Data.(float64)))
 
 	case compiler.BuiltinMin:
 		if len(args) != 2 || args[0].Type != ValNumber || args[1].Type != ValNumber {
-			return vm.runtimeErr(line, "want 2 numbers")
+			return vm.runtimeErr("E300", line, col, "want 2 numbers")
 		}
 		result = NumberVal(math.Min(args[0].Data.(float64), args[1].Data.(float64)))
 
 	case compiler.BuiltinMax:
 		if len(args) != 2 || args[0].Type != ValNumber || args[1].Type != ValNumber {
-			return vm.runtimeErr(line, "want 2 numbers")
+			return vm.runtimeErr("E300", line, col, "want 2 numbers")
 		}
 		result = NumberVal(math.Max(args[0].Data.(float64), args[1].Data.(float64)))
 
 	case compiler.BuiltinRnd:
 		if len(args) != 1 || args[0].Type != ValNumber {
-			return vm.runtimeErr(line, "want number")
+			return vm.runtimeErr("E300", line, col, "want number")
 		}
 		result = NumberVal(math.Round(args[0].Data.(float64)))
 
 	case compiler.BuiltinCap:
 		if len(args) != 1 || args[0].Type != ValString {
-			return vm.runtimeErr(line, "want string")
+			return vm.runtimeErr("E300", line, col, "want string")
 		}
 		result = StringVal(strings.ToUpper(args[0].Data.(string)))
 
 	case compiler.BuiltinLow:
 		if len(args) != 1 || args[0].Type != ValString {
-			return vm.runtimeErr(line, "want string")
+			return vm.runtimeErr("E300", line, col, "want string")
 		}
 		result = StringVal(strings.ToLower(args[0].Data.(string)))
 
 	case compiler.BuiltinTrm:
 		if len(args) != 1 || args[0].Type != ValString {
-			return vm.runtimeErr(line, "want string")
+			return vm.runtimeErr("E300", line, col, "want string")
 		}
 		result = StringVal(strings.TrimSpace(args[0].Data.(string)))
 
 	case compiler.BuiltinSpl:
 		if len(args) != 2 || args[0].Type != ValString || args[1].Type != ValString {
-			return vm.runtimeErr(line, "want 2 strings")
+			return vm.runtimeErr("E300", line, col, "want 2 strings")
 		}
 		parts := strings.Split(args[0].Data.(string), args[1].Data.(string))
 		arr := make([]Value, len(parts))
@@ -669,7 +678,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinJ:
 		if len(args) != 2 || args[0].Type != ValArray || args[1].Type != ValString {
-			return vm.runtimeErr(line, "want array, string")
+			return vm.runtimeErr("E300", line, col, "want array, string")
 		}
 		arr := args[0].Data.([]Value)
 		strs := make([]string, len(arr))
@@ -680,19 +689,19 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinMod:
 		if len(args) != 3 || args[0].Type != ValString || args[1].Type != ValString || args[2].Type != ValString {
-			return vm.runtimeErr(line, "want 3 strings")
+			return vm.runtimeErr("E300", line, col, "want 3 strings")
 		}
 		result = StringVal(strings.ReplaceAll(args[0].Data.(string), args[1].Data.(string), args[2].Data.(string)))
 
 	case compiler.BuiltinHas:
 		if len(args) != 2 || args[0].Type != ValString || args[1].Type != ValString {
-			return vm.runtimeErr(line, "want 2 strings")
+			return vm.runtimeErr("E300", line, col, "want 2 strings")
 		}
 		result = BoolVal(strings.Contains(args[0].Data.(string), args[1].Data.(string)))
 
 	case compiler.BuiltinSort:
 		if len(args) != 1 || args[0].Type != ValArray {
-			return vm.runtimeErr(line, "want array")
+			return vm.runtimeErr("E300", line, col, "want array")
 		}
 		arr := make([]Value, len(args[0].Data.([]Value)))
 		copy(arr, args[0].Data.([]Value))
@@ -706,22 +715,22 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinPop:
 		if len(args) != 1 || args[0].Type != ValArray {
-			return vm.runtimeErr(line, "want array")
+			return vm.runtimeErr("E300", line, col, "want array")
 		}
 		arr := args[0].Data.([]Value)
 		if len(arr) == 0 {
-			return vm.runtimeErr(line, "empty array")
+			return vm.runtimeErr("E300", line, col, "empty array")
 		}
 		result = arr[len(arr)-1]
 
 	case compiler.BuiltinRm:
 		if len(args) != 2 || args[0].Type != ValArray || args[1].Type != ValNumber {
-			return vm.runtimeErr(line, "want array, number")
+			return vm.runtimeErr("E300", line, col, "want array, number")
 		}
 		arr := args[0].Data.([]Value)
 		idx := int(args[1].Data.(float64))
 		if idx < 0 || idx >= len(arr) {
-			return vm.runtimeErr(line, "bounds %d", idx)
+			return vm.runtimeErr("E300", line, col, "bounds %d", idx)
 		}
 		newArr := make([]Value, 0, len(arr)-1)
 		newArr = append(newArr, arr[:idx]...)
@@ -730,7 +739,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinKey:
 		if len(args) != 1 || args[0].Type != ValMap {
-			return vm.runtimeErr(line, "want map")
+			return vm.runtimeErr("E300", line, col, "want map")
 		}
 		m := args[0].Data.(map[string]Value)
 		keys := make([]Value, 0, len(m))
@@ -741,7 +750,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinVal:
 		if len(args) != 1 || args[0].Type != ValMap {
-			return vm.runtimeErr(line, "want map")
+			return vm.runtimeErr("E300", line, col, "want map")
 		}
 		m := args[0].Data.(map[string]Value)
 		vals := make([]Value, 0, len(m))
@@ -755,7 +764,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinQ:
 		if len(args) != 1 || args[0].Type != ValNumber {
-			return vm.runtimeErr(line, "want number")
+			return vm.runtimeErr("E300", line, col, "want number")
 		}
 		ms := int(args[0].Data.(float64))
 		time.Sleep(time.Duration(ms) * time.Millisecond)
@@ -763,26 +772,26 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line int) erro
 
 	case compiler.BuiltinR:
 		if len(args) < 1 || args[0].Type != ValString {
-			return vm.runtimeErr(line, "want string")
+			return vm.runtimeErr("E300", line, col, "want string")
 		}
 		data, err := os.ReadFile(args[0].Data.(string))
 		if err != nil {
-			return vm.runtimeErr(line, "read fail")
+			return vm.runtimeErr("E300", line, col, "read fail")
 		}
 		result = StringVal(string(data))
 
 	case compiler.BuiltinW:
 		if len(args) != 2 || args[0].Type != ValString {
-			return vm.runtimeErr(line, "want path, data")
+			return vm.runtimeErr("E300", line, col, "want path, data")
 		}
 		err := os.WriteFile(args[0].Data.(string), []byte(args[1].String()), 0644)
 		if err != nil {
-			return vm.runtimeErr(line, "write fail")
+			return vm.runtimeErr("E300", line, col, "write fail")
 		}
 		result = BoolVal(true)
 
 	default:
-		return vm.runtimeErr(line, "unknown builtin")
+		return vm.runtimeErr("E300", line, col, "unknown builtin")
 	}
 
 	vm.push(result)

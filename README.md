@@ -7,7 +7,7 @@ dryLang is a minimalist, dynamically-typed programming language designed for max
 ## Quick Example
 
 ```rs
-.Hello World in dryLang.
+// Hello World in dryLang
 name "Zaky"
 age 17
 
@@ -24,8 +24,8 @@ pt greet("World")
 
 - **Ultra-short keywords** — `pt` (print), `fn` (function), `rev` (return), `lp` (loop), `el` (else)
 - **No variable keyword** — `name "Zaky"` or `name = "Zaky"`
-- **Comma decimal** — `pi 3,14` (comma = decimal, dot = comment)
-- **Dot comments** — `.this is a comment.`
+- **Standard decimal** — `pi 3.14`
+- **Standard comments** — `// this is a comment` and `/* block */`
 - **27 built-in functions** — zero imports needed
 - **Structs without keywords** — `user { name age }`
 - **String interpolation** — `"Hello ${name}"`
@@ -69,9 +69,8 @@ y all
 | Function | `fn add(a, b) { rev a + b }` | `def add(a, b): return a + b` |
 | Loop | `lp 5 { pt i }` | `for i in range(5): print(i)` |
 | If | `if x = 5 { pt "yes" }` | `if x == 5: print("yes")` |
-| Comment | `.this is a comment.` | `// this is a comment` |
-| Boolean | `t` / `f` | `true` / `false` |
-| Float | `3,14` | `3.14` |
+| Comment | `// this is a comment` | `// this is a comment` |
+| Float | `3.14` | `3.14` |
 
 ## Documentation
 

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"drylang/errfmt"
 	"drylang/lexer"
 	"fmt"
 	"strings"
@@ -73,15 +74,32 @@ func (p *Parser) advance() lexer.Token {
 	return tok
 }
 
+func errorCodeForMissingToken(typ lexer.TokenType) string {
+	switch typ {
+	case lexer.TOKEN_RBRACE:
+		return "E102"
+	case lexer.TOKEN_RPAREN:
+		return "E103"
+	case lexer.TOKEN_RBRACKET:
+		return "E104"
+	case lexer.TOKEN_IDENT:
+		return "E107"
+	case lexer.TOKEN_STRING:
+		return "E108"
+	}
+	return "E109"
+}
+
 func (p *Parser) expect(typ lexer.TokenType) (lexer.Token, error) {
 	if p.current.Type != typ {
-		return lexer.Token{}, p.errorf("want %s", typ)
+		code := errorCodeForMissingToken(typ)
+		return lexer.Token{}, p.errorf(code, "needs %s", typ)
 	}
 	return p.advance(), nil
 }
 
-func (p *Parser) errorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%d:%d %s", p.current.Line, p.current.Col, fmt.Sprintf(format, args...))
+func (p *Parser) errorf(code, format string, args ...interface{}) error {
+	return errfmt.Format(code, p.current.Line, p.current.Col, fmt.Sprintf(format, args...))
 }
 
 func (p *Parser) skipSemicolons() {
@@ -201,7 +219,7 @@ func (p *Parser) parseFnDecl(isAsync bool) (Stmt, error) {
 func (p *Parser) parseAsyncFnDecl() (Stmt, error) {
 	p.advance() // consume asn
 	if p.current.Type != lexer.TOKEN_FN {
-		return nil, p.errorf("want fn")
+		return nil, p.errorf("E105", "needs fn")
 	}
 	return p.parseFnDecl(true)
 }
@@ -338,7 +356,7 @@ func (p *Parser) parseTry() (Stmt, error) {
 	p.skipSemicolons()
 
 	if p.current.Type != lexer.TOKEN_ERR {
-		return nil, p.errorf("want err")
+		return nil, p.errorf("E106", "needs err")
 	}
 	p.advance() // consume err
 
@@ -688,7 +706,7 @@ func (p *Parser) parsePrefix() (Expr, error) {
 		return &AwaitExpr{Value: val, Line: tok.Line, Col: tok.Col}, nil
 
 	default:
-		return nil, p.errorf("illegal %s", p.current.Literal)
+		return nil, p.errorf("E109", "illegal %s", p.current.Literal)
 	}
 }
 

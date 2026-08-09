@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "DryLang",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#builtins"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "begin": "(?<![a-zA-Z0-9_])\\.(?![a-zA-Z0-9_])",
+          "end": "(?<![a-zA-Z0-9_])\\.(?![a-zA-Z0-9_])",
+          "name": "comment.block.drylang"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.drylang",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#interpolations"
+            },
+            {
+              "match": "\\\\[nt\"'\\\\]",
+              "name": "constant.character.escape.drylang"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.drylang",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "include": "#interpolations"
+            },
+            {
+              "match": "\\\\[nt\"'\\\\]",
+              "name": "constant.character.escape.drylang"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.other.drylang",
+          "begin": "`",
+          "end": "`"
+        }
+      ]
+    },
+    "interpolations": {
+      "patterns": [
+        {
+          "name": "meta.embedded.line.drylang",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "captures": {
+            "0": {
+              "name": "punctuation.definition.template-expression.begin.drylang"
+            }
+          },
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(fn|rev|cns|if|el|elif|lp|done|chk|err|on|use|pv|try)\\b",
+          "name": "keyword.control.drylang"
+        },
+        {
+          "match": "\\b(tr|f)\\b",
+          "name": "constant.language.boolean.drylang"
+        },
+        {
+          "match": "\\b(unknown)\\b",
+          "name": "constant.language.null.drylang"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "match": "\\b(pt|in|now|date|req|json|arg|env|cmd|dir|del|die|len|get|add|num|str|abs|min|max|rnd|ran|cap|low|trm|spl|j|mod|has|sort|pop|rm|key|val)\\b",
+          "name": "support.function.drylang"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b\\d+(?:,\\d+)?\\b",
+          "name": "constant.numeric.drylang"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "(->|\\+|-|\\*|/|%|==|!=|<|>|&|\\||!|=)",
+          "name": "keyword.operator.drylang"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.drylang"
+}

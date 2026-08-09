@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"drylang/errfmt"
 	"fmt"
 	"strings"
 	"unicode"
@@ -81,8 +82,8 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func (l *Lexer) errorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%d:%d %s", l.line, l.col, fmt.Sprintf(format, args...))
+func (l *Lexer) errorf(code, format string, args ...interface{}) error {
+	return errfmt.Format(code, l.line, l.col, fmt.Sprintf(format, args...))
 }
 
 func (l *Lexer) makeToken(typ TokenType, literal string, line, col int) Token {
@@ -114,9 +115,40 @@ func (l *Lexer) nextToken() (Token, error) {
 		return l.makeToken(TOKEN_SEMICOLON, "\\n", line, col), nil
 	}
 
-	// Comment: . opens, . closes (dots inside content ignored)
+	// Slash or Comments
+	if ch == '/' {
+		if l.peek() == '/' {
+			// Single-line comment
+			l.advance() // consume second /
+			for l.pos < len(l.input) && l.peek() != '\n' {
+				l.advance()
+			}
+			return l.nextToken() // skip comment, get next
+		} else if l.peek() == '*' {
+			// Multi-line comment
+			l.advance() // consume *
+			for l.pos < len(l.input) {
+				if l.peek() == '*' && l.peekAt(1) == '/' {
+					l.advance() // consume *
+					l.advance() // consume /
+					break
+				}
+				if l.peek() == '\n' {
+					l.line++
+					l.col = 1
+					l.pos++
+				} else {
+					l.advance()
+				}
+			}
+			return l.nextToken() // skip comment, get next
+		}
+		return l.makeToken(TOKEN_SLASH, "/", line, col), nil
+	}
+
+	// Dot (now purely for decimal or property access, but here we just emit TOKEN_DOT)
 	if ch == '.' {
-		return l.readComment()
+		return l.makeToken(TOKEN_DOT, ".", line, col), nil
 	}
 
 	// String literals
@@ -141,40 +173,6 @@ func (l *Lexer) nextToken() (Token, error) {
 
 	// Operators and delimiters
 	return l.readOperator()
-}
-
-// readComment scans a comment from . to closing .
-// Rule: first . opens, scan forward looking for closing .
-// A closing . is one followed by whitespace, newline, EOF, or a code-significant character.
-// Dots adjacent to letters on both sides (like .nested.) are content, not closers.
-func (l *Lexer) readComment() (Token, error) {
-	l.advance() // consume opening .
-
-	for l.pos < len(l.input) {
-		ch := l.peek()
-		if ch == '.' {
-			// Check what's before this dot (content char or whitespace?)
-			prevIdx := l.pos - 1
-			prevIsLetter := prevIdx >= 0 && (unicode.IsLetter(l.input[prevIdx]) || unicode.IsDigit(l.input[prevIdx]))
-
-			// Check what's after this dot
-			nextIdx := l.pos + 1
-			nextIsLetter := nextIdx < len(l.input) && (unicode.IsLetter(l.input[nextIdx]) || unicode.IsDigit(l.input[nextIdx]))
-
-			// If dot is surrounded by letters on both sides, it's content (e.g., .nested.)
-			// Otherwise it's a closing dot
-			if prevIsLetter && nextIsLetter {
-				l.advance() // skip this dot, it's part of content
-				continue
-			}
-
-			l.advance() // consume closing .
-			return l.nextToken()
-		}
-		l.advance()
-	}
-
-	return Token{}, l.errorf("open .")
 }
 
 // readString scans a string with ${} interpolation support.
@@ -255,7 +253,7 @@ func (l *Lexer) readString(quote rune) (Token, error) {
 					}
 				}
 				if interpTok.Type == TOKEN_EOF {
-					return Token{}, l.errorf("open ${")
+					return Token{}, l.errorf("E108", "needs closing } for interp")
 				}
 				l.tokens = append(l.tokens, interpTok)
 			}
@@ -266,13 +264,13 @@ func (l *Lexer) readString(quote rune) (Token, error) {
 		}
 
 		if ch == '\n' {
-			return Token{}, l.errorf("open %c", quote)
+			return Token{}, l.errorf("E108", "needs closing %c", quote)
 		}
 
 		buf.WriteRune(l.advance())
 	}
 
-	return Token{}, l.errorf("open %c", quote)
+	return Token{}, l.errorf("E108", "needs closing %c", quote)
 }
 
 // nextInterpToken scans a single token inside ${} interpolation.
@@ -308,7 +306,7 @@ func (l *Lexer) readRawString() (Token, error) {
 		buf.WriteRune(l.advance())
 	}
 
-	return Token{}, l.errorf("open `")
+	return Token{}, l.errorf("E108", "needs closing `")
 }
 
 // readNumber scans an integer or float (comma decimal: 89,5).
@@ -321,10 +319,10 @@ func (l *Lexer) readNumber() (Token, error) {
 		buf.WriteRune(l.advance())
 	}
 
-	// Check for comma decimal (89,5 — no space after comma, followed by digit)
-	if l.pos < len(l.input) && l.peek() == ',' && l.pos+1 < len(l.input) && unicode.IsDigit(l.peekAt(1)) {
-		buf.WriteRune('.') // Convert comma to dot internally
-		l.advance()        // consume comma
+	// Check for dot decimal (e.g. 3.14)
+	if l.pos < len(l.input) && l.peek() == '.' && l.pos+1 < len(l.input) && unicode.IsDigit(l.peekAt(1)) {
+		buf.WriteRune('.') 
+		l.advance()        // consume dot
 
 		for l.pos < len(l.input) && unicode.IsDigit(l.peek()) {
 			buf.WriteRune(l.advance())
@@ -365,8 +363,7 @@ func (l *Lexer) readOperator() (Token, error) {
 		return l.makeToken(TOKEN_PLUS, "+", line, col), nil
 	case '*':
 		return l.makeToken(TOKEN_STAR, "*", line, col), nil
-	case '/':
-		return l.makeToken(TOKEN_SLASH, "/", line, col), nil
+
 	case '%':
 		return l.makeToken(TOKEN_PERCENT, "%", line, col), nil
 	case '&':
@@ -423,5 +420,5 @@ func (l *Lexer) readOperator() (Token, error) {
 		return l.makeToken(TOKEN_GT, ">", line, col), nil
 	}
 
-	return Token{}, l.errorf("illegal %c", ch)
+	return Token{}, l.errorf("E109", "illegal %c", ch)
 }

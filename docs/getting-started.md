@@ -9,7 +9,7 @@
 ### Build from Source
 
 ```bash
-git clone https://github.com/user/drylang.git
+git clone https://github.com/zakyislm/drylang.git
 cd drylang
 go build -o y.exe .
 ```
@@ -19,8 +19,10 @@ This produces the `y` binary — the dryLang compiler and runtime.
 ### Verify Installation
 
 ```bash
-y --help
+y
 ```
+
+This prints the usage: `y <file.y|folder|all>`
 
 ## Your First Program
 

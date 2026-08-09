@@ -1,0 +1,35 @@
+{
+  "name": "drylang",
+  "publisher": "zakyislm",
+  "displayName": "DryLang",
+  "description": "Syntax highlighting for DryLang (.y) files",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "drylang",
+        "aliases": [
+          "DryLang",
+          "drylang"
+        ],
+        "extensions": [
+          ".y"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "drylang",
+        "scopeName": "source.drylang",
+        "path": "./syntaxes/drylang.tmLanguage.json"
+      }
+    ]
+  }
+}

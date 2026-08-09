@@ -2,6 +2,7 @@ package main
 
 import (
 	"drylang/compiler"
+	"drylang/errfmt"
 	"drylang/lexer"
 	"drylang/parser"
 	"drylang/vm"
@@ -13,8 +14,8 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("y <file.y|folder|all>")
-		os.Exit(1)
+		runREPL()
+		os.Exit(0)
 	}
 
 	target := os.Args[1]
@@ -78,6 +79,9 @@ func main() {
 }
 
 func run(source string) error {
+	// Initialize error formatter
+	errfmt.Init(source)
+
 	// Lex
 	lex := lexer.New(source)
 	tokens, err := lex.Tokenize()

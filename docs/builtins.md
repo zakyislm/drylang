@@ -1,6 +1,6 @@
 # Built-in Functions
 
-dryLang provides 27 built-in functions available without any imports. All function names are 1–4 characters.
+dryLang provides 25 built-in functions available without any imports. All function names are 1–4 characters.
 
 ## I/O
 
