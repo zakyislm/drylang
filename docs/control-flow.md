@@ -2,15 +2,15 @@
 
 ## If Statement
 
-```
+```rust
 if condition {
-  .body.
+  // body
 }
 ```
 
 The condition can be any expression. It is evaluated for truthiness (see [Data Types — Truthiness](types.md#truthiness)).
 
-```
+```rust
 age 18
 
 if age >= 18 {
@@ -22,7 +22,7 @@ if age >= 18 {
 
 Use `el` for the else block:
 
-```
+```rust
 score 45
 
 if score >= 60 {
@@ -36,7 +36,7 @@ if score >= 60 {
 
 Use `elif` for additional conditions:
 
-```
+```rust
 score 85
 
 if score >= 90 {
@@ -58,7 +58,7 @@ You can chain as many `elif` blocks as needed.
 
 Blocks can be written on a single line:
 
-```
+```rust
 if x = 5 { pt "five" }
 if active { pt "on" } el { pt "off" }
 ```
@@ -67,8 +67,8 @@ if active { pt "on" } el { pt "off" }
 
 dryLang has **free indentation**. Curly braces `{}` define blocks, not whitespace.
 
-```
-.These are all valid:.
+```rust
+// These are all valid:
 if x = 5 {
 pt "five"
 }
@@ -84,7 +84,7 @@ if x = 5 { pt "five" }
 
 In an expression context (inside `if`), the `=` operator is **equality**, not assignment:
 
-```
+```rust
 name "Zaky"
 
 if name = "Zaky" {
@@ -100,7 +100,7 @@ if name != "Andi" {
 
 The `on` statement matches a value against multiple cases:
 
-```
+```rust
 on(value) {
   case1 { .body. }
   case2 { .body. }
@@ -109,7 +109,7 @@ on(value) {
 
 ### Example
 
-```
+```rust
 day 3
 
 on(day) {
@@ -123,7 +123,7 @@ on(day) {
 
 ### String Cases
 
-```
+```rust
 cmd "start"
 
 on(cmd) {
@@ -140,3 +140,8 @@ on(cmd) {
 - **No fall-through** — each case is independent. Only the matching case body executes.
 - Cases are checked in order from top to bottom.
 - If no case matches, nothing happens (no default/else case).
+
+---
+
+Prev : [Strings](strings.md) | Next : [Loops](loops.md)
+<!-- W3Schools-like web docs integration placeholder -->

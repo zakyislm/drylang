@@ -9,9 +9,9 @@
 
 In a **statement context** (start of line, after identifier), `=` is assignment. In an **expression context** (inside `if`, etc.), `=` is equality comparison.
 
-```
-x = 5              .assignment.
-if x = 5 { ... }   .equality comparison.
+```rust
+x = 5              // assignment
+if x = 5 { ... }   // equality comparison
 ```
 
 ## Arithmetic
@@ -28,21 +28,21 @@ if x = 5 { ... }   .equality comparison.
 
 The `+` operator concatenates strings:
 
-```
+```rust
 greeting "Hello" + ", " + "World!"
-pt greeting    .prints "Hello, World!".
+pt greeting    // prints "Hello, World!"
 ```
 
 If either operand is a string, the other is converted to string automatically:
 
-```
-pt "Age: " + 17    .prints "Age: 17".
-pt "Score: " + 99,5    .prints "Score: 99.5".
+```rust
+pt "Age: " + 17    // prints "Age: 17"
+pt "Score: " + 99,5    // prints "Score: 99.5"
 ```
 
 ### Unary Minus
 
-```
+```rust
 x -5
 y -(3 + 2)
 ```
@@ -60,11 +60,11 @@ y -(3 + 2)
 
 All comparison operators return `t` or `f`.
 
-```
-pt 5 = 5       .prints "t".
-pt 5 != 3      .prints "t".
-pt 10 < 20     .prints "t".
-pt 10 >= 10    .prints "t".
+```rust
+pt 5 = 5       // prints "t"
+pt 5 != 3      // prints "t"
+pt 10 < 20     // prints "t"
+pt 10 >= 10    // prints "t"
 ```
 
 ## Logical
@@ -75,7 +75,7 @@ pt 10 >= 10    .prints "t".
 | `\|` | OR | `a \| b` |
 | `!` | NOT | `!a` |
 
-```
+```rust
 online t
 admin t
 
@@ -111,6 +111,11 @@ From lowest to highest:
 
 Use parentheses to override precedence:
 
-```
+```rust
 result (a + b) * c
 ```
+
+---
+
+Prev : [Types](types.md) | Next : [Strings](strings.md)
+<!-- W3Schools-like web docs integration placeholder -->

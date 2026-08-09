@@ -4,7 +4,7 @@
 
 Use the `use` keyword to import a dryLang module:
 
-```
+```rust
 use "helpers"
 ```
 
@@ -26,15 +26,15 @@ By default, **all** top-level variables and functions in a module are exported (
 
 Use `pv` to mark items as private:
 
-```
-.math.y.
+```rust
+// math.y
 
-.Exported — accessible by importers.
+// Exported — accessible by importers
 fn add(a, b) { rev a + b }
 fn sub(a, b) { rev a - b }
-PI 3,14
+PI 3.14
 
-.Private — NOT accessible by importers.
+// Private — NOT accessible by importers
 pv fn internal_calc(x) { rev x * x }
 pv secret "abc123"
 ```
@@ -46,9 +46,6 @@ pv secret "abc123"
 You can run multiple files together:
 
 ```bash
-.file1.y defines functions.
-.file2.y uses them.
-
 y file1.y,file2.y
 ```
 
@@ -61,19 +58,46 @@ y all
 
 Files are concatenated in order, so declarations in earlier files are available in later files.
 
-## Future: Namespaced Modules
+## Importing via URL
 
-The following module patterns are planned for post-MVP:
+You can import scripts directly from the internet by providing a full URL:
 
-```
-.Standard library modules (planned).
-use "regex"
-use "http"
-use "json"
+```rust
+use "https://example.com/math.y"
 
-result regex.match(`\d+`, input)
-resp http.open("GET", "https://api.example.com")
-data json.parse(resp)
+pt add(2, 3)
 ```
 
-These will provide namespaced access to extended functionality without polluting the global scope.
+The compiler fetches the file, parses its AST, and prepends its statements into your program.
+
+## GitHub Shorthand
+
+dryLang natively supports importing scripts directly from GitHub repositories:
+
+```rust
+use "github.com/user/repo"
+```
+
+The compiler automatically translates this to:
+`https://raw.githubusercontent.com/user/repo/main/idx.y`
+
+It looks for `idx.y` as the default entry point of the remote module.
+
+You can also specify a path within the repo:
+
+```rust
+use "github.com/user/repo/lib/utils.y"
+```
+
+## Cycle Prevention
+
+`use` implements strict cycle prevention by caching the absolute paths/URLs of all visited files. If a module has already been loaded, it is skipped — preventing infinite import loops.
+
+## Duplicate Prevention
+
+If two modules import the same file, dryLang only loads it once. The resolved path is cached globally across the entire compilation.
+
+---
+
+Prev : [Error Handling](error-handling.md) | Next : [Built-ins](builtins.md)
+<!-- W3Schools-like web docs integration placeholder -->

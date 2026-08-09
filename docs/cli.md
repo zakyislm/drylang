@@ -1,84 +1,92 @@
 # CLI Reference
 
-The dryLang CLI is a single binary: `y`.
+The dryLang compiler provides a command-line interface to execute and manage your scripts.
 
-## Usage
+## Running Scripts
 
-```
-y <target>
-```
-
-## Targets
-
-### Single File
+You can run scripts using the `dry` (or `y`) command:
 
 ```bash
-y main.y
-y script.y
-y path/to/file.y
+# Run a single file
+dry script.y
+dry script.dry
+
+# Run multiple files (concatenated in order)
+dry lib.y,main.y
+
+# Run all .y and .dry files in a directory
+dry myfolder
+dry .
+
+# Run all .y and .dry files in the current directory (alternative)
+dry all
 ```
 
-### Multiple Files
+## Remote Execution
 
-Comma-separated (no spaces):
+dryLang can execute scripts directly from the internet or GitHub:
 
 ```bash
-y file1.y,file2.y,file3.y
+# Run a script from a raw URL
+dry https://example.com/script.y
+
+# Run from a GitHub repository (looks for idx.y by default)
+dry github.com/user/repo
+
+# Run a specific file from a GitHub repository
+dry github.com/user/repo/path/to/script.y
 ```
 
-Files are loaded and concatenated in order. Declarations in earlier files are available in later files.
+## Creating Projects (Scaffolding)
 
-### Directory
-
-Run all `.y` files in a directory:
+Use the `init` command to scaffold a new project from built-in templates.
 
 ```bash
-y myfolder
-y src/scripts
+dry init [directory] [template]
 ```
 
-### All Files
+### Examples:
+```bash
+# Create an empty project in the current directory (creates idx.y)
+dry init .
 
-Run all `.y` files in the current directory:
+# Create a project in a new folder called "myapp"
+dry init myapp
+
+# Create a REST API project in the current directory
+dry init . api
+
+# Create a Web File Server in a new folder
+dry init website web
+```
+
+### Available Templates:
+- `api` — REST API Server
+- `web` — Static File Server
+- `crud` — Database CRUD application
+- `fetch` — HTTP JSON fetch example
+- `cli` — Basic CLI tool
+- `automation` — Automation script
+- `scraper` — Web Scraper skeleton
+- `hello` — Hello World
+
+## REPL (Interactive Mode)
+
+If you run `dry` without any arguments, it starts the interactive REPL:
 
 ```bash
-y all
+$ dry
+dryLang REPL v1.0.0
+> pt "Hello"
+Hello
 ```
 
-## Execution Pipeline
+## Options
 
-When you run `y`, the following pipeline executes:
+- **`--help` or `-h`**: Displays the help menu and usage instructions.
+- **`--version` or `-v`**: Displays the current version of dryLang.
 
-```
-Source (.y) → Lexer → Tokens → Parser → AST → Compiler → Bytecode → VM → Output
-```
+---
 
-1. **Lexer** — tokenizes the source into tokens
-2. **Parser** — builds an Abstract Syntax Tree (AST) using Pratt parsing
-3. **Compiler** — compiles AST to bytecode instructions
-4. **VM** — executes bytecode on a stack-based virtual machine
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | Error (compile-time or runtime) |
-
-## Error Output
-
-Errors are printed to stderr in the format:
-
-```
-line:col message
-```
-
-Examples:
-
-```
-3:12 close }
-5:1 unknown x
-1:0 read main.y
-```
-
-Errors are intentionally minimal — read the docs for details.
+[< Prev (Comments)](comments.md) | [Home](index.md) | [Next (Errors) >](errors.md)
+<!-- W3Schools-like web docs integration placeholder -->

@@ -437,19 +437,17 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 			return p.parseStructDecl()
 		}
 	}
-
-	// Early check: ident = expr → assignment (NOT equality)
-	if p.current.Type == lexer.TOKEN_IDENT && p.peek().Type == lexer.TOKEN_ASSIGN {
-		name := p.advance() // consume ident
-		p.advance()         // consume =
-		val, err := p.parseExpression(PREC_LOWEST)
-		if err != nil {
-			return nil, err
+	// Check for ident expr (space-separated assignment) before parsing expression
+	// This avoids parsing it as two separate expressions or failing
+	if p.current.Type == lexer.TOKEN_IDENT {
+		if p.peek().Type != lexer.TOKEN_SEMICOLON && p.peek().Type != lexer.TOKEN_EOF &&
+			p.peek().Type != lexer.TOKEN_RBRACE && p.peek().Type != lexer.TOKEN_ASSIGN &&
+			p.peekPrecedence() == PREC_LOWEST {
+			
+			// We might be looking at `ident expr`
+			// Wait, let's just let it fall through to the expression parser,
+			// and if it's an Ident, we can check for space-separated assignment afterwards.
 		}
-		if isAllUpper(name.Literal) {
-			return &ConstDeclStmt{Name: name.Literal, Value: val, Line: name.Line, Col: name.Col}, nil
-		}
-		return &AssignStmt{Name: name.Literal, Value: val, Line: name.Line, Col: name.Col}, nil
 	}
 
 	expr, err := p.parseExpression(PREC_LOWEST)
@@ -457,30 +455,25 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 		return nil, err
 	}
 
-	// Check if this is an assignment
-	ident, isIdent := expr.(*Ident)
-	if isIdent {
-		// ident = expr (assignment with =)
-		if p.current.Type == lexer.TOKEN_ASSIGN {
-			p.advance()
-			val, err := p.parseExpression(PREC_LOWEST)
-			if err != nil {
-				return nil, err
+	// 1. Check if the parsed expression is a BinaryExpr with '='
+	// Since '=' has PREC_EQUALITY, it parses as an infix operator.
+	// But in a statement context, it's an assignment!
+	if binExpr, ok := expr.(*BinaryExpr); ok && binExpr.Op == lexer.TOKEN_ASSIGN {
+		switch target := binExpr.Left.(type) {
+		case *Ident:
+			if isAllUpper(target.Name) {
+				return &ConstDeclStmt{Name: target.Name, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
 			}
-
-			// Check if ALL CAPS → auto const
-			if isAllUpper(ident.Name) {
-				return &ConstDeclStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
-			}
-			return &AssignStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
+			return &AssignStmt{Name: target.Name, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
+		case *IndexExpr:
+			return &IndexAssignStmt{Object: target.Object, Index: target.Index, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
+		case *DotExpr:
+			return &DotAssignStmt{Object: target.Object, Field: target.Field, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
 		}
+	}
 
-		// Check for struct instantiation: varname typename { field val ... }
-		if p.current.Type == lexer.TOKEN_IDENT && p.peek().Type == lexer.TOKEN_LBRACE {
-			return p.parseStructInit(ident.Name)
-		}
-
-		// ident expr (assignment without =, space-separated)
+	// 2. Check for space-separated assignment (ident expr)
+	if ident, isIdent := expr.(*Ident); isIdent {
 		// Only if next token starts an expression (not end of statement)
 		if p.current.Type != lexer.TOKEN_SEMICOLON && p.current.Type != lexer.TOKEN_EOF &&
 			p.current.Type != lexer.TOKEN_RBRACE && p.isExprStart() {
@@ -492,26 +485,6 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 				return &ConstDeclStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
 			}
 			return &AssignStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
-		}
-	}
-
-	// Check index/dot assignment: arr[0] = val, obj.field = val
-	if p.current.Type == lexer.TOKEN_ASSIGN {
-		switch target := expr.(type) {
-		case *IndexExpr:
-			p.advance()
-			val, err := p.parseExpression(PREC_LOWEST)
-			if err != nil {
-				return nil, err
-			}
-			return &IndexAssignStmt{Object: target.Object, Index: target.Index, Value: val, Line: target.Line, Col: target.Col}, nil
-		case *DotExpr:
-			p.advance()
-			val, err := p.parseExpression(PREC_LOWEST)
-			if err != nil {
-				return nil, err
-			}
-			return &DotAssignStmt{Object: target.Object, Field: target.Field, Value: val, Line: target.Line, Col: target.Col}, nil
 		}
 	}
 

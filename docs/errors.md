@@ -2,7 +2,7 @@
 
 dryLang errors are intentionally minimal. Format:
 
-```
+```rust
 line:col message
 ```
 
@@ -52,7 +52,7 @@ These errors occur during program execution.
 
 ## Reading Error Messages
 
-```
+```rust
 3:12 close }
 │ │  └── message
 │ └── column (character position)
@@ -61,7 +61,7 @@ These errors occur during program execution.
 
 Example program with error:
 
-```
+```rust
 fn greet(name) {
   pt "Hello, " + name
 }
@@ -69,7 +69,7 @@ fn greet(name) {
 
 If you add a stray `}`:
 
-```
+```rust
 fn greet(name) {
   pt "Hello, " + name
 }
@@ -86,3 +86,8 @@ Error messages in dryLang are deliberately short:
 - **No verbose explanations** — the error name + position is enough
 - **No colors** — plain text, pipe-friendly
 - **Always includes position** — `line:col` for every error
+
+---
+
+Prev : [CLI](cli.md)
+<!-- W3Schools-like web docs integration placeholder -->

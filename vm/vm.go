@@ -3,23 +3,30 @@ package vm
 import (
 	"drylang/compiler"
 	"drylang/errfmt"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"database/sql"
 )
 
 // Value types
 const (
-	ValNumber  = "number"
-	ValString  = "string"
-	ValBool    = "bool"
-	ValArray   = "array"
-	ValMap     = "map"
+	ValNumber    = "number"
+	ValString    = "string"
+	ValBool      = "bool"
+	ValArray     = "array"
+	ValMap       = "map"
 	ValFn        = "fn"
 	ValStructDef = "struct_def"
 	ValUnknown   = "unknown"
@@ -98,6 +105,7 @@ func isTruthy(v Value) bool {
 
 // VM executes dryLang bytecode.
 type VM struct {
+	mu       sync.Mutex
 	chunk    *compiler.Chunk
 	fns      []*compiler.CompiledFn
 	globals  map[string]Value
@@ -806,6 +814,377 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		}
 		result = BoolVal(true)
 
+	case compiler.BuiltinOp:
+		if len(args) < 2 {
+			return vm.runtimeErr("E300", line, col, "want port, handler")
+		}
+		port := args[0].String()
+		if args[1].Type != ValFn {
+			return vm.runtimeErr("E300", line, col, "want handler function")
+		}
+		handlerFn := args[1].Data.(*compiler.CompiledFn)
+
+		mode := "uni"
+		if len(args) > 2 {
+			mode = args[2].String()
+		}
+
+		maxWorkers := 100
+		if len(args) > 3 && args[3].Type == ValNumber {
+			maxWorkers = int(args[3].Data.(float64))
+		}
+
+		sem := make(chan struct{}, maxWorkers)
+
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			var execVM *VM
+
+			if mode == "mul" {
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				execVM = &VM{
+					chunk:   vm.chunk,
+					fns:     vm.fns,
+					globals: vm.globals, // shared!
+					stack:   make([]Value, 1024),
+					sp:      0,
+					ip:      0,
+				}
+			} else {
+				vm.mu.Lock()
+				defer vm.mu.Unlock()
+				execVM = vm
+			}
+
+			reqMap := make(map[string]Value)
+			method := r.Method
+			switch method {
+			case "GET":
+				method = "G"
+			case "POST":
+				method = "PO"
+			case "PUT":
+				method = "PUT"
+			case "PATCH":
+				method = "PAT"
+			case "DELETE":
+				method = "DEL"
+			case "OPTIONS":
+				method = "OPT"
+			case "HEAD":
+				method = "H"
+			}
+			reqMap["method"] = StringVal(method)
+			reqMap["path"] = StringVal(r.URL.Path)
+
+			bodyBytes, _ := io.ReadAll(r.Body)
+			reqMap["body"] = StringVal(string(bodyBytes))
+
+			queryMap := make(map[string]Value)
+			for k, v := range r.URL.Query() {
+				if len(v) > 0 {
+					queryMap[k] = StringVal(v[0])
+				}
+			}
+			reqMap["query"] = Value{ValMap, queryMap}
+
+			// Save old state if we are in uni mode
+			savedIP := execVM.ip
+			savedChunk := execVM.chunk
+
+			execVM.push(FnVal(handlerFn))
+			execVM.push(Value{ValMap, reqMap})
+
+			frame := callFrame{
+				fn:    handlerFn,
+				ip:    execVM.ip,
+				bp:    execVM.sp - 1, // 1 argument
+				chunk: execVM.chunk,
+			}
+			execVM.frames = append(execVM.frames, frame)
+
+			err := execVM.execute(handlerFn.Chunk)
+
+			var res Value
+			if err == nil {
+				execVM.frames = execVM.frames[:len(execVM.frames)-1]
+				res = execVM.pop()
+				execVM.sp = frame.bp - 1
+				if execVM.sp < 0 {
+					execVM.sp = 0
+				}
+				execVM.ip = savedIP
+				execVM.chunk = savedChunk
+			} else {
+				w.WriteHeader(500)
+				w.Write([]byte(err.Error()))
+				return
+			}
+
+			if res.Type == ValMap {
+				m := res.Data.(map[string]Value)
+				if status, ok := m["status"]; ok && status.Type == ValNumber {
+					w.WriteHeader(int(status.Data.(float64)))
+				}
+				if body, ok := m["body"]; ok {
+					w.Write([]byte(body.String()))
+				}
+			} else {
+				w.Write([]byte(res.String()))
+			}
+		})
+
+		fmt.Printf("Starting dryLang server on port %s (mode: %s)...\n", port, mode)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			return vm.runtimeErr("E300", line, col, "server error: %v", err)
+		}
+		result = BoolVal(true)
+
+	case compiler.BuiltinDb:
+		if len(args) < 3 {
+			return vm.runtimeErr("E300", line, col, "want driver, dsn, query")
+		}
+		driver := args[0].String()
+		dsn := args[1].String()
+		query := args[2].String()
+
+		db, err := sql.Open(driver, dsn)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "db open err: %v", err)
+		}
+		defer db.Close()
+
+		var qargs []interface{}
+		for i := 3; i < len(args); i++ {
+			if args[i].Type == ValNumber {
+				qargs = append(qargs, args[i].Data.(float64))
+			} else if args[i].Type == ValBool {
+				qargs = append(qargs, args[i].Data.(bool))
+			} else {
+				qargs = append(qargs, args[i].String())
+			}
+		}
+
+		isSelect := strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "SELECT")
+		if isSelect || strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "PRAGMA") || strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "SHOW") || strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "DESCRIBE") {
+			rows, err := db.Query(query, qargs...)
+			if err != nil {
+				return vm.runtimeErr("E300", line, col, "db query err: %v", err)
+			}
+			defer rows.Close()
+
+			cols, _ := rows.Columns()
+			var resultArr []Value
+
+			for rows.Next() {
+				columns := make([]interface{}, len(cols))
+				columnPointers := make([]interface{}, len(cols))
+				for i := range columns {
+					columnPointers[i] = &columns[i]
+				}
+
+				if err := rows.Scan(columnPointers...); err != nil {
+					return vm.runtimeErr("E300", line, col, "db scan err: %v", err)
+				}
+
+				rowMap := make(map[string]Value)
+				for i, colName := range cols {
+					val := columns[i]
+					if val == nil {
+						rowMap[colName] = UnknownValue
+						continue
+					}
+					switch v := val.(type) {
+					case []byte:
+						rowMap[colName] = StringVal(string(v))
+					case string:
+						rowMap[colName] = StringVal(v)
+					case int64:
+						rowMap[colName] = NumberVal(float64(v))
+					case int:
+						rowMap[colName] = NumberVal(float64(v))
+					case int32:
+						rowMap[colName] = NumberVal(float64(v))
+					case float64:
+						rowMap[colName] = NumberVal(v)
+					case bool:
+						rowMap[colName] = BoolVal(v)
+					default:
+						rowMap[colName] = StringVal(fmt.Sprintf("%v", v))
+					}
+				}
+				resultArr = append(resultArr, Value{ValMap, rowMap})
+			}
+			result = Value{ValArray, resultArr}
+		} else {
+			res, err := db.Exec(query, qargs...)
+			if err != nil {
+				return vm.runtimeErr("E300", line, col, "db exec err: %v", err)
+			}
+
+			lastId, _ := res.LastInsertId()
+			rowsAffected, _ := res.RowsAffected()
+
+			m := make(map[string]Value)
+			m["last_insert_id"] = NumberVal(float64(lastId))
+			m["rows_affected"] = NumberVal(float64(rowsAffected))
+			result = Value{ValMap, m}
+		}
+
+	case compiler.BuiltinNow:
+		result = NumberVal(float64(time.Now().UnixMilli()))
+
+	case compiler.BuiltinDate:
+		now := time.Now()
+		m := make(map[string]Value)
+		m["year"] = NumberVal(float64(now.Year()))
+		m["month"] = NumberVal(float64(now.Month()))
+		m["day"] = NumberVal(float64(now.Day()))
+		m["hour"] = NumberVal(float64(now.Hour()))
+		m["min"] = NumberVal(float64(now.Minute()))
+		m["sec"] = NumberVal(float64(now.Second()))
+		m["format"] = StringVal(now.Format("2006-01-02 15:04:05"))
+		result = Value{ValMap, m}
+
+	case compiler.BuiltinReq:
+		if len(args) < 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want url string")
+		}
+		reqURL := args[0].Data.(string)
+		resp, err := http.Get(reqURL)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "req fail: %v", err)
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "read fail: %v", err)
+		}
+		result = StringVal(string(body))
+
+	case compiler.BuiltinJson:
+		if len(args) != 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want json string")
+		}
+		// Simple JSON parser: converts JSON string to dryLang map/array
+		jsonStr := args[0].Data.(string)
+		parsed, err := parseJSON(jsonStr)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "json parse fail: %v", err)
+		}
+		result = parsed
+
+	case compiler.BuiltinArg:
+		osArgs := os.Args
+		// Skip binary name and script name
+		startIdx := 2
+		if len(osArgs) > startIdx {
+			arr := make([]Value, len(osArgs)-startIdx)
+			for i := startIdx; i < len(osArgs); i++ {
+				arr[i-startIdx] = StringVal(osArgs[i])
+			}
+			result = ArrayVal(arr)
+		} else {
+			result = ArrayVal([]Value{})
+		}
+
+	case compiler.BuiltinEnv:
+		if len(args) != 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want string")
+		}
+		result = StringVal(os.Getenv(args[0].Data.(string)))
+
+	case compiler.BuiltinCmd:
+		if len(args) < 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want command string")
+		}
+		cmdStr := args[0].Data.(string)
+		cmdArgs := make([]string, 0)
+		for i := 1; i < len(args); i++ {
+			cmdArgs = append(cmdArgs, args[i].String())
+		}
+		var cmd *exec.Cmd
+		if len(cmdArgs) > 0 {
+			cmd = exec.Command(cmdStr, cmdArgs...)
+		} else {
+			cmd = exec.Command(cmdStr)
+		}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "cmd fail: %v\n%s", err, string(out))
+		}
+		result = StringVal(strings.TrimRight(string(out), "\n\r"))
+
+	case compiler.BuiltinDir:
+		if len(args) != 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want path string")
+		}
+		entries, err := os.ReadDir(args[0].Data.(string))
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "dir fail: %v", err)
+		}
+		arr := make([]Value, len(entries))
+		for i, e := range entries {
+			arr[i] = StringVal(e.Name())
+		}
+		result = ArrayVal(arr)
+
+	case compiler.BuiltinDel:
+		if len(args) != 1 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want path string")
+		}
+		err := os.Remove(args[0].Data.(string))
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "del fail: %v", err)
+		}
+		result = BoolVal(true)
+
+	case compiler.BuiltinDie:
+		if len(args) > 0 {
+			msg := args[0].String()
+			if msg != "" {
+				fmt.Fprintln(os.Stderr, msg)
+			}
+		}
+		os.Exit(1)
+		result = UnknownValue // unreachable
+
+	case compiler.BuiltinMath:
+		if len(args) < 2 || args[0].Type != ValString {
+			return vm.runtimeErr("E300", line, col, "want math(op, ...numbers)")
+		}
+		op := args[0].Data.(string)
+		if args[1].Type != ValNumber {
+			return vm.runtimeErr("E300", line, col, "want number")
+		}
+		a := args[1].Data.(float64)
+		switch op {
+		case "sqrt":
+			result = NumberVal(math.Sqrt(a))
+		case "pow":
+			if len(args) < 3 || args[2].Type != ValNumber {
+				return vm.runtimeErr("E300", line, col, "pow wants 2 numbers")
+			}
+			result = NumberVal(math.Pow(a, args[2].Data.(float64)))
+		case "ceil":
+			result = NumberVal(math.Ceil(a))
+		case "floor":
+			result = NumberVal(math.Floor(a))
+		case "sin":
+			result = NumberVal(math.Sin(a))
+		case "cos":
+			result = NumberVal(math.Cos(a))
+		case "tan":
+			result = NumberVal(math.Tan(a))
+		case "log":
+			result = NumberVal(math.Log(a))
+		case "log10":
+			result = NumberVal(math.Log10(a))
+		default:
+			return vm.runtimeErr("E300", line, col, "unknown math op: %s", op)
+		}
+
 	default:
 		return vm.runtimeErr("E300", line, col, "unknown builtin")
 	}
@@ -829,4 +1208,39 @@ func valuesEqual(a, b Value) bool {
 		return b.Type == ValUnknown
 	}
 	return false
+}
+
+func parseJSON(input string) (Value, error) {
+	var raw interface{}
+	if err := json.Unmarshal([]byte(input), &raw); err != nil {
+		return UnknownValue, err
+	}
+	return jsonToValue(raw), nil
+}
+
+func jsonToValue(v interface{}) Value {
+	if v == nil {
+		return UnknownValue
+	}
+	switch val := v.(type) {
+	case float64:
+		return NumberVal(val)
+	case string:
+		return StringVal(val)
+	case bool:
+		return BoolVal(val)
+	case []interface{}:
+		arr := make([]Value, len(val))
+		for i, item := range val {
+			arr[i] = jsonToValue(item)
+		}
+		return ArrayVal(arr)
+	case map[string]interface{}:
+		m := make(map[string]Value, len(val))
+		for k, item := range val {
+			m[k] = jsonToValue(item)
+		}
+		return MapVal(m)
+	}
+	return UnknownValue
 }

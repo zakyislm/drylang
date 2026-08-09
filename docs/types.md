@@ -6,11 +6,11 @@ dryLang is dynamically typed. Variables can hold any type, and the type is deter
 
 Numbers represent both integers and floating-point values. Internally, all numbers are stored as 64-bit floats.
 
-```
-x 42          .integer.
-y -17         .negative.
-z 3,14        .float (comma = decimal point).
-big 1000000   .large number.
+```rust
+x 42          // integer
+y -17         // negative
+z 3,14        // float (comma = decimal point)
+big 1000000   // large number
 ```
 
 ### Float Decimal Rule
@@ -23,17 +23,17 @@ dryLang uses **comma** (`,`) as the decimal separator — the dot (`.`) is reser
 | `89, 5` | Two separate values (space after comma = separator) |
 | `fn(a, b)` | Two parameters (comma followed by space) |
 
-```
-pi 3,14          .float 3.14.
-coords [45,5, 90,2]   .array of two floats: 45.5 and 90.2 — no! this won't work.
-coords [45,5, 90,2]   .comma-space = separator, so this is [45.5, 90.2] ✓.
+```rust
+pi 3,14          // float 3.14
+coords [45,5, 90,2]   // array of two floats: 45.5 and 90.2 — no! this won't work
+coords [45,5, 90,2]   // comma-space = separator, so this is [45.5, 90.2] ✓
 ```
 
 ## String
 
 Strings are sequences of characters enclosed in double or single quotes.
 
-```
+```rust
 greeting "Hello, World!"
 name 'Zaky'
 ```
@@ -52,7 +52,7 @@ Both `"` and `'` are equivalent — both support interpolation and escape sequen
 | `\$` | Literal `$` (prevent interpolation) |
 | `\0` | Null character |
 
-```
+```rust
 pt "Line 1\nLine 2"
 pt "Tab\there"
 pt "Price: \$100"
@@ -62,7 +62,7 @@ pt "Price: \$100"
 
 Use `${}` inside strings to embed expressions:
 
-```
+```rust
 name "Zaky"
 age 17
 
@@ -77,10 +77,10 @@ pt "Config host: ${config.host}"
 
 Raw strings are enclosed in backticks (`` ` ``). No interpolation or escape processing occurs:
 
-```
+```rust
 pattern `\d+\.\w+`
 path `C:\Users\zaky\Desktop`
-template `Hello ${name}`    .literal "${name}", not interpolated.
+template `Hello ${name}`    // literal "${name}", not interpolated
 ```
 
 Raw strings are ideal for regex patterns and file paths.
@@ -94,7 +94,7 @@ dryLang uses single-character boolean values:
 | `t` | true |
 | `f` | false |
 
-```
+```rust
 active t
 deleted f
 
@@ -107,16 +107,16 @@ if active {
 
 `unknown` is a special value representing an uninitialized or undetermined state.
 
-```
-? status         .declares unknown bool.
-pt status        .prints "unknown".
+```rust
+? status         // declares unknown bool
+pt status        // prints "unknown"
 
-. Functions without rev return unknown .
+//  Functions without rev return unknown 
 fn do_stuff() {
   pt "doing stuff"
 }
 x = do_stuff()
-pt x             .prints "unknown".
+pt x             // prints "unknown"
 ```
 
 ### Truthiness
@@ -138,13 +138,18 @@ pt x             .prints "unknown".
 
 Use the `get()` built-in to check a value's type at runtime:
 
-```
-pt get(42)        .prints "number".
-pt get("hello")   .prints "string".
-pt get(t)         .prints "bool".
-pt get([1,2,3])   .prints "array".
-pt get({"a": 1})  .prints "map".
-pt get(greet)     .prints "fn".
+```rust
+pt get(42)        // prints "number"
+pt get("hello")   // prints "string"
+pt get(t)         // prints "bool"
+pt get([1,2,3])   // prints "array"
+pt get({"a": 1})  // prints "map"
+pt get(greet)     // prints "fn"
 ```
 
 `get()` returns one of: `"number"`, `"string"`, `"bool"`, `"array"`, `"map"`, `"fn"`, `"unknown"`.
+
+---
+
+Prev : [Variables](variables.md) | Next : [Operators](operators.md)
+<!-- W3Schools-like web docs integration placeholder -->

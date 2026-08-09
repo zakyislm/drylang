@@ -6,7 +6,7 @@ Structs are user-defined data types with named fields.
 
 Declare a struct by naming it followed by field names in `{}`:
 
-```
+```rust
 user {
   name
   age
@@ -16,7 +16,7 @@ user {
 
 Or on one line:
 
-```
+```rust
 user { name age email }
 ```
 
@@ -26,7 +26,7 @@ user { name age email }
 
 Create an instance by providing the variable name, struct type, and field values:
 
-```
+```rust
 user { name age email }
 
 u user {
@@ -40,28 +40,28 @@ u user {
 
 Use dot notation:
 
-```
-pt u.name     .Zaky.
-pt u.age      .17.
-pt u.email    .zaky@example.com.
+```rust
+pt u.name     // Zaky
+pt u.age      // 17
+pt u.email    // zaky@example.com
 ```
 
 Or bracket notation:
 
-```
-pt u["name"]    .Zaky.
+```rust
+pt u["name"]    // Zaky
 ```
 
 ## Modifying Fields
 
-```
+```rust
 u.age = 18
 u["email"] = "new@example.com"
 ```
 
 ## Structs in Arrays
 
-```
+```rust
 player { name score }
 
 players [
@@ -69,8 +69,8 @@ players [
   player { name "Andi" score 85 }
 ]
 
-.Note: struct instances inside arrays work like maps.
-.Access via regular array indexing + dot notation:.
+// Note: struct instances inside arrays work like maps
+// Access via regular array indexing + dot notation:
 
 .lp len(players) {
   pt players[i].name
@@ -81,12 +81,12 @@ players [
 
 Structs are internally represented as maps. A struct instance is a map with field names as keys. This means all map functions work on struct instances:
 
-```
+```rust
 user { name age }
 u user { name "Zaky" age 17 }
 
-pt key(u)     .shows fields.
-pt len(u)     .2 (plus __struct__ meta key).
+pt key(u)     // shows fields
+pt len(u)     // 2 (plus __struct__ meta key)
 ```
 
 ## Struct vs Map
@@ -101,3 +101,8 @@ pt len(u)     .2 (plus __struct__ meta key).
 | Dynamic keys | ❌ | ✅ |
 
 Use structs when you want a **named type** with a **fixed set of fields**. Use maps when you need **dynamic keys**.
+
+---
+
+Prev : [Collections](collections.md) | Next : [Error Handling](error-handling.md)
+<!-- W3Schools-like web docs integration placeholder -->

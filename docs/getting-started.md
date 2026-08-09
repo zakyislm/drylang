@@ -28,7 +28,7 @@ This prints the usage: `y <file.y|folder|all>`
 
 Create a file called `hello.y`:
 
-```
+```rust
 pt "Hello, World!"
 ```
 
@@ -40,7 +40,7 @@ y hello.y
 
 Output:
 
-```
+```rust
 Hello, World!
 ```
 
@@ -48,41 +48,41 @@ Hello, World!
 
 Create `intro.y`:
 
-```
-.Welcome to dryLang!.
+```rust
+// Welcome to dryLang!
 
-. Variables — no keyword needed .
+//  Variables — no keyword needed 
 name "Zaky"
 age 17
 height 175,5
 
-. Print with string interpolation .
+//  Print with string interpolation 
 pt "Name: ${name}"
 pt "Age: ${age}"
 pt "Height: ${height} cm"
 
-. Constants .
+//  Constants 
 cns pi 3,14
 MAXLIFE 5
 
-. Array .
+//  Array 
 colors ["red", "green", "blue"]
 pt colors
 pt "Count: ${len(colors)}"
 
-. Function .
+//  Function 
 fn greet(who) {
   rev "Hello, " + who + "!"
 }
 
 pt greet("World")
 
-. Loop .
+//  Loop 
 lp 3 {
   pt "Iteration ${i}"
 }
 
-. Conditional .
+//  Conditional 
 score 85
 
 if score >= 90 {
@@ -109,3 +109,8 @@ All dryLang source files use the `.y` extension.
 - [Variables & Constants](variables.md) — how to store data
 - [Data Types](types.md) — what types exist
 - [Functions](functions.md) — how to write functions
+
+---
+
+Prev : [Home](index.md) | Next : [Variables](variables.md)
+<!-- W3Schools-like web docs integration placeholder -->
