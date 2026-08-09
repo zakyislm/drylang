@@ -1,0 +1,19 @@
+# dryLang
+
+dryLang is a minimalist, dynamically-typed programming language compiled to bytecode and executed on a fast, stack-based virtual machine. It is designed to be stripped of boilerplate—no syntax exceeds four characters. Say exactly what you mean, nothing more.
+
+## Key Features
+- **Single Binary**: The entire distribution (compiler, VM, and standard library) is bundled into a single 5MB binary.
+- **Zero Dependencies**: Install it anywhere without worrying about ecosystems or virtual environments.
+- **Minimalist Syntax**: Core concepts are expressed in short, direct keywords (e.g., `fn` for functions, `rev` for return, `mut` for mutability).
+- **WebAssembly Ready**: The dryLang VM is fully portable and runs directly in the browser, powering our online Playground.
+
+## Important Links
+- **Home**: [https://drylang.jeki.me](https://drylang.jeki.me)
+- **Download**: [https://drylang.jeki.me/get](https://drylang.jeki.me/get)
+- **Playground**: [https://drylang.jeki.me/vcom](https://drylang.jeki.me/vcom)
+- **Documentation**: [https://drylang.jeki.me/docs](https://drylang.jeki.me/docs)
+- **Source Code**: [https://github.com/zakyislm/drylang](https://github.com/zakyislm/drylang)
+
+## About the Project
+This project was born out of a desire for extreme simplicity. Instead of writing 20 paragraphs to do a simple task, dryLang gives you the exact tools you need in the shortest possible syntax. It prioritizes directness and removes the visual noise typical of modern programming languages.

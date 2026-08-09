@@ -1,0 +1,561 @@
+:root {
+  --bg-primary: #030712;
+  --bg-secondary: #090E17;
+  --text-primary: #F3F4F6;
+  --text-muted: #6B7A99;
+  --accent: #3B82F6;
+  --border-color: #1E293B;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Lora', serif;
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Minimalist Editorial Utilities */
+.section {
+  padding: 8rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title-huge {
+  font-size: 5rem;
+  line-height: 1.1;
+  margin-bottom: 2rem;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  font-weight: 300;
+}
+
+.btn-primary, .btn-outline {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0;
+}
+
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: 1px solid var(--text-primary);
+}
+
+.btn-primary:hover {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-outline:hover {
+  border-color: var(--text-primary);
+}
+
+.code-block {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+
+/* Brutalist Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+.grid-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.metric-item {
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.metric-value {
+  font-family: 'Lora', serif;
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 103px; /* Exact height to pair with 1px border = 104px total */
+}
+
+.nav-logo {
+  font-family: 'Lora', serif;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  align-items: center;
+}
+
+.nav-links a:hover {
+  color: var(--accent);
+}
+
+/* Fix Monaco hover tooltip flicker */
+/* (We no longer need line-height: normal here because body handles it, but keeping it as a safety net) */
+.monaco-editor {
+  line-height: normal;
+}
+
+.monaco-hover,
+.monaco-editor-hover,
+.monaco-editor-overlaymessage,
+[monaco-visible-bit="hover"] {
+  pointer-events: none !important;
+}
+
+/* Fix Monaco Find Widget buttons layout shifting on hover/checked */
+.monaco-editor .find-widget .button,
+.monaco-editor .find-widget .monaco-custom-checkbox {
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   Docs Sidebar Styling
+   ========================================================================== */
+.docs-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: sticky;
+  top: 104px; /* Exactly at the bottom of Navbar */
+  height: calc(100vh - 104px);
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  overflow-y: auto;
+  /* Hide scrollbar for a cleaner look */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+/* Documentation Prev/Next Links */
+.docs-nav-link {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  text-decoration: none;
+  flex: 1;
+  transition: all 0.2s ease;
+}
+
+.docs-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.docs-nav-link.prev {
+  align-items: flex-start;
+}
+
+.docs-nav-link.next {
+  align-items: flex-end;
+}
+
+/* Fix for SyntaxHighlighter child code tags inheriting markdown-body background */
+.custom-highlighter code {
+  background: none !important;
+  padding: 0 !important;
+}
+
+.docs-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.docs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.docs-group-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.docs-group-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.docs-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  opacity: 0.8;
+  transition: opacity 0.2s, color 0.2s;
+  border-left: 2px solid transparent;
+  padding-left: 10px;
+  margin-left: -12px;
+}
+
+.docs-link:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.docs-link.active {
+  opacity: 1;
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Markdown Body Styling
+   ========================================================================== */
+.markdown-body {
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.7;
+  max-width: 800px;
+  padding-bottom: 4rem;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-family: 'Lora', serif;
+  color: #ffffff;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  font-weight: 600;
+}
+
+.markdown-body h1 {
+  line-height: 1.3;
+  font-size: 2.5rem;
+  margin-top: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5em;
+}
+
+.markdown-body h2 {
+  font-size: 1.8rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.3em;
+}
+
+.markdown-body h3 {
+  font-size: 1.4rem;
+}
+
+.markdown-body p {
+  margin-bottom: 1.5em;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 1.5em;
+  padding-left: 2em;
+}
+
+.markdown-body li {
+  margin-bottom: 0.5em;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--border-color);
+  padding-left: 1em;
+  color: var(--text-muted);
+  margin-left: 0;
+  margin-bottom: 1.5em;
+  background-color: var(--bg-secondary);
+  padding: 1em 1em 1em 1.5em;
+  border-radius: 4px;
+}
+
+.markdown-body code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  background-color: var(--bg-secondary);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-body pre {
+  background-color: var(--bg-secondary);
+  padding: 1.2em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1.5em;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  font-size: 0.9em;
+  color: #e5e7eb;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5em;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.75em 1em;
+  border: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-wrapper {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton-box {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   Mobile Responsiveness
+   ========================================================================== */
+
+/* Utility classes for responsive layouts */
+.grid-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.flex-row-mobile-col {
+  display: flex;
+  flex-direction: row;
+  gap: 3rem;
+}
+
+.docs-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+}
+
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+  }
+  
+  .title-huge {
+    font-size: 3rem;
+  }
+  
+  .title-large {
+    font-size: 2.5rem;
+  }
+  
+  .grid-metrics {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .grid-split {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .flex-row-mobile-col {
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .docs-layout {
+    flex-direction: column;
+  }
+  
+  .docs-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+    position: static;
+  }
+  
+  .mobile-only {
+    display: block;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Hamburger Menu Support */
+  .nav-links {
+    display: none; /* Hidden by default on mobile, handled by React state */
+    position: absolute;
+    top: 104px;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+  
+  /* Download Page Overrides */
+  .os-box-container {
+    max-width: 100% !important;
+  }
+}
+.docs-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  gap: 3rem;
+  align-items: flex-start;
+}
+
+.docs-main {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .docs-layout {
+    flex-direction: column;
+    gap: 0 !important;
+    align-items: stretch !important;
+  }
+  .docs-main {
+    padding-top: 0 !important;
+  }
+}
