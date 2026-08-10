@@ -1,0 +1,28 @@
+# Structs & Classes
+
+DryLang supports robust Object-Oriented patterns via `struct` and `class`.
+
+## Structs
+Structs define a strict blueprint for an object.
+```rust
+struct Person {
+    name,
+    age
+}
+
+// Instantiation requires the 'new' keyword
+let p = new Person("Zaky", 25)
+pt(p.name)
+```
+## Classes
+Classes wrap both properties and methods.
+```rust
+class Calculator {
+    fn add(a, b) {
+        return a + b
+    }
+}
+
+let calc = new Calculator()
+pt(calc.add(100, 50))
+```

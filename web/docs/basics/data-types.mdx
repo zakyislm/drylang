@@ -1,0 +1,22 @@
+# Data Types
+
+DryLang supports standard primitive types natively.
+
+## Number
+All numbers (integers and floats) are treated under a unified Number type (represented as `loat64` under the hood).
+```rust
+let count = 10
+let price = 99.99
+```
+## String
+Strings are enclosed in double quotes.
+```rust
+let greeting = "Hello, World!"
+```
+## Boolean
+`	rue` or `alse`.
+```rust
+let isActive = true
+```
+## Null / Unknown
+Uninitialized variables or failed lookups result in a null/unknown state.

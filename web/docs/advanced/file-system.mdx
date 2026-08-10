@@ -1,0 +1,23 @@
+# File System
+
+## (path)\ - Read
+Reads a file's content as a string.
+```rust
+let text = r("data.txt")
+```
+## `w(path, content)` - Write
+Writes a string to a file. Overwrites if it exists.
+```rust
+w("log.txt", "System rebooted")
+```
+## `dir(path)` - List Directory
+Returns an array of file/folder names.
+```rust
+let files = dir(".")
+pt(files)
+```
+## `del(path)` - Delete
+Deletes a file or directory.
+```rust
+del("temp.txt")
+```

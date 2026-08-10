@@ -1,0 +1,30 @@
+# Conditionals
+
+## If / Else
+Standard `if` and `else` logic.
+```rust
+let score = 85
+
+if score > 80 {
+    pt("Great job!")
+} else {
+    pt("Keep trying!")
+}
+```
+## On / Case (Switch Replacement)
+DryLang replaces the traditional `switch` statement with a highly ergonomic `on` and `case` block.
+```rust
+let role = "admin"
+
+on role {
+    case "admin" {
+        pt("Access granted: Admin")
+    }
+    case "user" {
+        pt("Access granted: User")
+    }
+    case ? { // The question mark acts as the 'default' fallback
+        pt("Access denied")
+    }
+}
+```

@@ -1,0 +1,47 @@
+cl Base1 {
+	base1_field
+
+	fn init() {
+		this.base1_field = "Base1 data"
+	}
+
+	fn say_hello() {
+		pt("Hello from Base1")
+	}
+
+	fn override_me() {
+		pt("Base1 original")
+	}
+}
+
+cl Base2 {
+	base2_field
+
+	fn init() {
+		this.base2_field = "Base2 data"
+	}
+
+	fn say_world() {
+		pt("World from Base2")
+	}
+}
+
+cl Child <- Base1, Base2 {
+	child_field
+
+	fn init() {
+		this.child_field = "Child data"
+	}
+
+	fn override_me() {
+		pt("Child overridden")
+	}
+}
+
+cns c = Child()
+c.say_hello()
+c.say_world()
+c.override_me()
+pt(c.base1_field)
+pt(c.base2_field)
+pt(c.child_field)

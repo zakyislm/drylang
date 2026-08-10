@@ -1,0 +1,16 @@
+# Scope & Closures
+
+DryLang uses lexical scoping. Functions can "capture" variables from their surrounding environment.
+```rust
+let multiplier = 10
+
+fn makeAdder(x) {
+    return fn(y) => {
+        // 'multiplier' and 'x' are captured from the outer scope!
+        return (x + y) * multiplier 
+    }
+}
+
+let addFive = makeAdder(5)
+pt(addFive(2)) // (5 + 2) * 10 = 70
+```

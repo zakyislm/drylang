@@ -1,0 +1,5 @@
+// Minimal struct definition
+User {
+    name
+    age
+}

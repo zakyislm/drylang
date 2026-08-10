@@ -1,0 +1,16 @@
+# Error Handling
+
+DryLang provides a simplified `	ry` and `err` block to elegantly handle exceptions without crashing the VM.
+
+## Try / Err
+The `err` block catches any panic or error that occurs inside the `	ry` block. The error message is automatically injected into the `e` variable (or the specified variable).
+```rust
+try {
+    // Attempting to open a non-existent file will throw an error
+    let content = r("fake_file.txt")
+} err e {
+    pt("Caught an error: " + e)
+}
+
+pt("Program continues running safely.")
+```

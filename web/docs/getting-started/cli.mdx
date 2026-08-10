@@ -1,0 +1,25 @@
+# CLI Usage
+
+The `dry` command-line interface provides tools for executing scripts and scaffolding projects.
+
+## Running a Script
+Execute a `.dry` file by simply providing the filename:
+```bash
+dry main.dry
+```
+
+You can also run all `.dry` files in a directory:
+```bash
+dry .
+```
+
+## Scaffolding a Project
+DryLang comes with built-in templates. Use the `init` command to bootstrap a new project.
+
+```bash
+# Initialize a REST API template in the current directory
+dry init . api
+
+# Initialize a basic web file server
+dry init . web
+```

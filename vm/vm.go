@@ -2,8 +2,15 @@ package vm
 
 import (
 	"bufio"
-	"drylang/compiler"
+	"drylang/core"
 	"drylang/errfmt"
+	"drylang/vm/classhandler"
+	"drylang/vm/colshandler"
+	"drylang/vm/controlhandler"
+	"drylang/vm/errorhandler"
+	"drylang/vm/functionhandler"
+	"drylang/vm/mathhandler"
+	"drylang/vm/varhandler"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,117 +28,13 @@ import (
 	"database/sql"
 )
 
-// Value types
-const (
-	ValNumber         = "number"
-	ValString         = "string"
-	ValBool           = "bool"
-	ValArray          = "array"
-	ValMap            = "map"
-	ValFn             = "fn"
-	ValBoundMethod    = "bound_method"
-	ValStructDef      = "struct_def"
-	ValStructInstance = "struct_instance"
-	ValClass          = "class"
-	ValInstance       = "instance"
-	ValUnknown        = "unknown"
-)
-
-// Value wraps any dryLang runtime value.
-type Value struct {
-	Type string
-	Data interface{}
-}
-
-var UnknownValue = Value{Type: ValUnknown, Data: nil}
-
-func NumberVal(v float64) Value          { return Value{ValNumber, v} }
-func StringVal(v string) Value           { return Value{ValString, v} }
-func BoolVal(v bool) Value               { return Value{ValBool, v} }
-func ArrayVal(v []Value) Value           { return Value{ValArray, v} }
-func MapVal(v map[string]Value) Value    { return Value{ValMap, v} }
-func FnVal(v *compiler.CompiledFn) Value { return Value{ValFn, v} }
-
-func (v Value) String() string {
-	switch v.Type {
-	case ValNumber:
-		f := v.Data.(float64)
-		if f == math.Trunc(f) {
-			return strconv.FormatInt(int64(f), 10)
-		}
-		return strconv.FormatFloat(f, 'f', -1, 64)
-	case ValString:
-		return v.Data.(string)
-	case ValBool:
-		if v.Data.(bool) {
-			return "t"
-		}
-		return "f"
-	case ValArray:
-		arr := v.Data.([]Value)
-		parts := make([]string, len(arr))
-		for i, item := range arr {
-			parts[i] = item.String()
-		}
-		return "[" + strings.Join(parts, ", ") + "]"
-	case ValMap:
-		m := v.Data.(map[string]Value)
-		parts := make([]string, 0, len(m))
-		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
-		}
-		return "{" + strings.Join(parts, ", ") + "}"
-	case ValFn:
-		fn := v.Data.(*compiler.CompiledFn)
-		return fmt.Sprintf("<fn %s>", fn.Name)
-	case ValStructDef:
-		sd := v.Data.(compiler.StructDef)
-		return fmt.Sprintf("<struct %s>", sd.Name)
-	case ValStructInstance:
-		m := v.Data.(map[string]Value)
-		// We could store the struct name if we wrapped it, but for now it's a map.
-		parts := make([]string, 0, len(m))
-		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
-		}
-		return "{" + strings.Join(parts, ", ") + "}"
-	case ValClass:
-		cd := v.Data.(compiler.ClassDef)
-		return fmt.Sprintf("<class %s>", cd.Name)
-	case ValInstance:
-		inst := v.Data.(*Instance)
-		return fmt.Sprintf("<instance %s>", inst.Class.Name)
-	case ValUnknown:
-		return "unknown"
-	}
-	return "?"
-}
-
-func isTruthy(v Value) bool {
-	switch v.Type {
-	case ValBool:
-		return v.Data.(bool)
-	case ValNumber:
-		return v.Data.(float64) != 0
-	case ValString:
-		return v.Data.(string) != ""
-	case ValArray:
-		return len(v.Data.([]Value)) > 0
-	case ValMap:
-		return len(v.Data.(map[string]Value)) > 0
-	case ValUnknown:
-		return false
-	}
-	return true
-}
-
 // VM executes dryLang bytecode.
 type VM struct {
 	mu           sync.Mutex
-	chunk        *compiler.Chunk
-	fns          []*compiler.CompiledFn
-	globals      map[string]Value
-	stack        []Value
+	chunk        *core.Chunk
+	fns          []*core.CompiledFn
+	globals      map[string]core.Value
+	stack        []core.Value
 	sp           int // stack pointer
 	ip           int // instruction pointer
 	frames       []callFrame
@@ -140,10 +43,10 @@ type VM struct {
 }
 
 type callFrame struct {
-	fn    *compiler.CompiledFn
+	fn    *core.CompiledFn
 	ip    int
 	bp    int // base pointer (stack offset)
-	chunk *compiler.Chunk
+	chunk *core.Chunk
 }
 
 type tryFrame struct {
@@ -153,44 +56,34 @@ type tryFrame struct {
 	frameDepth int
 }
 
-type Instance struct {
-	Class  compiler.ClassDef
-	Fields map[string]Value
-}
-
-type BoundMethod struct {
-	Instance *Instance
-	Method   compiler.ClassMethod
-}
-
 // New creates a new VM.
-func New(chunk *compiler.Chunk, fns []*compiler.CompiledFn) *VM {
+func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
 	return &VM{
 		chunk:   chunk,
 		fns:     fns,
-		globals: make(map[string]Value),
-		stack:   make([]Value, 4096),
+		globals: make(map[string]core.Value),
+		stack:   make([]core.Value, 4096),
 		sp:      0,
 		ip:      0,
 	}
 }
 
-func (vm *VM) push(v Value) {
+func (vm *VM) push(v core.Value) {
 	vm.stack[vm.sp] = v
 	vm.sp++
 }
 
-func (vm *VM) pop() Value {
+func (vm *VM) pop() core.Value {
 	vm.sp--
 	return vm.stack[vm.sp]
 }
 
-func (vm *VM) Update(chunk *compiler.Chunk, fns []*compiler.CompiledFn) {
+func (vm *VM) Update(chunk *core.Chunk, fns []*core.CompiledFn) {
 	vm.chunk = chunk
 	vm.fns = fns
 }
 
-func (vm *VM) peek() Value {
+func (vm *VM) peek() core.Value {
 	return vm.stack[vm.sp-1]
 }
 
@@ -203,7 +96,7 @@ func (vm *VM) Run() error {
 	return vm.execute(vm.chunk)
 }
 
-func (vm *VM) execute(chunk *compiler.Chunk) error {
+func (vm *VM) execute(chunk *core.Chunk) error {
 	vm.chunk = chunk
 	vm.ip = 0
 
@@ -218,140 +111,128 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 		vm.ip++
 
 		switch inst.Op {
-		case compiler.OpConst:
+		case core.OpConst:
 			val := chunk.Constants[inst.Operand]
 			switch v := val.(type) {
 			case float64:
-				vm.push(NumberVal(v))
+				vm.push(core.NumberVal(v))
 			case string:
-				vm.push(StringVal(v))
-			case *compiler.CompiledFn:
-				vm.push(FnVal(v))
-			case compiler.StructDef:
-				vm.push(Value{ValStructDef, v})
-			case compiler.ClassDef:
-				vm.push(Value{ValClass, v})
+				vm.push(core.StringVal(v))
+			case *core.CompiledFn:
+				vm.push(core.FnVal(v))
+			case core.StructDef:
+				vm.push(core.Value{core.ValStructDef, v})
+			case core.ClassDef:
+				// Resolve parents at runtime
+				var resolvedParents []*core.ClassDef
+				for _, pName := range v.ParentNames {
+					if parentVal, ok := vm.globals[pName]; ok && parentVal.Type == core.ValClass {
+						pDef := parentVal.Data.(core.ClassDef)
+						resolvedParents = append(resolvedParents, &pDef)
+					} else {
+						return vm.Errorf("E300 at %d:%d: parent class '%s' not found", line, col, pName)
+					}
+				}
+				v.Parents = resolvedParents
+				vm.push(core.Value{core.ValClass, v})
 			default:
-				vm.push(Value{ValUnknown, nil})
+				vm.push(core.Value{core.ValUnknown, nil})
 			}
 
-		case compiler.OpPop:
+		case core.OpPop:
 			if vm.sp > 0 {
 				vm.pop()
 			}
 
-		case compiler.OpTrue:
-			vm.push(BoolVal(true))
-		case compiler.OpFalse:
-			vm.push(BoolVal(false))
-		case compiler.OpUnknown:
-			vm.push(UnknownValue)
+		case core.OpTrue:
+			vm.push(core.BoolVal(true))
+		case core.OpFalse:
+			vm.push(core.BoolVal(false))
+		case core.OpUnknown:
+			vm.push(core.UnknownValue)
 
-		case compiler.OpAdd:
-			b, a := vm.pop(), vm.pop()
-			if a.Type == ValString || b.Type == ValString {
-				vm.push(StringVal(a.String() + b.String()))
-			} else if a.Type == ValNumber && b.Type == ValNumber {
-				vm.push(NumberVal(a.Data.(float64) + b.Data.(float64)))
-			} else {
-				return vm.runtimeErr("E300", line, col, "want number")
+		case core.OpAdd:
+			if err := mathhandler.OpAdd(vm, line, col); err != nil {
+				return err
 			}
 
-		case compiler.OpSub:
-			b, a := vm.pop(), vm.pop()
-			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr("E300", line, col, "want number")
+		case core.OpSub:
+			if err := mathhandler.OpSub(vm, line, col); err != nil {
+				return err
 			}
-			vm.push(NumberVal(a.Data.(float64) - b.Data.(float64)))
 
-		case compiler.OpMul:
-			b, a := vm.pop(), vm.pop()
-			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr("E300", line, col, "want number")
+		case core.OpMul:
+			if err := mathhandler.OpMul(vm, line, col); err != nil {
+				return err
 			}
-			vm.push(NumberVal(a.Data.(float64) * b.Data.(float64)))
 
-		case compiler.OpDiv:
-			b, a := vm.pop(), vm.pop()
-			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr("E300", line, col, "want number")
+		case core.OpDiv:
+			if err := mathhandler.OpDiv(vm, line, col); err != nil {
+				return err
 			}
-			if b.Data.(float64) == 0 {
-				return vm.runtimeErr("E300", line, col, "div by 0")
-			}
-			vm.push(NumberVal(a.Data.(float64) / b.Data.(float64)))
 
-		case compiler.OpMod:
-			b, a := vm.pop(), vm.pop()
-			if a.Type != ValNumber || b.Type != ValNumber {
-				return vm.runtimeErr("E300", line, col, "want number")
+		case core.OpMod:
+			if err := mathhandler.OpMod(vm, line, col); err != nil {
+				return err
 			}
-			vm.push(NumberVal(math.Mod(a.Data.(float64), b.Data.(float64))))
 
-		case compiler.OpNeg:
+		case core.OpNeg:
 			v := vm.pop()
-			if v.Type != ValNumber {
+			if v.Type != core.ValNumber {
 				return vm.runtimeErr("E300", line, col, "want number")
 			}
-			vm.push(NumberVal(-v.Data.(float64)))
+			vm.push(core.NumberVal(-v.Data.(float64)))
 
-		case compiler.OpEqual:
-			b, a := vm.pop(), vm.pop()
-			vm.push(BoolVal(valuesEqual(a, b)))
-
-		case compiler.OpNotEqual:
-			b, a := vm.pop(), vm.pop()
-			vm.push(BoolVal(!valuesEqual(a, b)))
-
-		case compiler.OpLess:
-			b, a := vm.pop(), vm.pop()
-			if a.Type == ValNumber && b.Type == ValNumber {
-				vm.push(BoolVal(a.Data.(float64) < b.Data.(float64)))
-			} else {
-				vm.push(BoolVal(a.String() < b.String()))
+		case core.OpEqual:
+			if err := mathhandler.OpEqual(vm, line, col); err != nil {
+				return err
 			}
 
-		case compiler.OpGreater:
-			b, a := vm.pop(), vm.pop()
-			if a.Type == ValNumber && b.Type == ValNumber {
-				vm.push(BoolVal(a.Data.(float64) > b.Data.(float64)))
-			} else {
-				vm.push(BoolVal(a.String() > b.String()))
+		case core.OpNotEqual:
+			if err := mathhandler.OpNotEqual(vm, line, col); err != nil {
+				return err
 			}
 
-		case compiler.OpLessEq:
-			b, a := vm.pop(), vm.pop()
-			if a.Type == ValNumber && b.Type == ValNumber {
-				vm.push(BoolVal(a.Data.(float64) <= b.Data.(float64)))
-			} else {
-				vm.push(BoolVal(a.String() <= b.String()))
+		case core.OpLess:
+			if err := mathhandler.OpLess(vm, line, col); err != nil {
+				return err
 			}
 
-		case compiler.OpGreaterEq:
-			b, a := vm.pop(), vm.pop()
-			if a.Type == ValNumber && b.Type == ValNumber {
-				vm.push(BoolVal(a.Data.(float64) >= b.Data.(float64)))
-			} else {
-				vm.push(BoolVal(a.String() >= b.String()))
+		case core.OpGreater:
+			if err := mathhandler.OpGreater(vm, line, col); err != nil {
+				return err
 			}
 
-		case compiler.OpAnd:
-			b, a := vm.pop(), vm.pop()
-			vm.push(BoolVal(isTruthy(a) && isTruthy(b)))
+		case core.OpLessEq:
+			if err := mathhandler.OpLessEq(vm, line, col); err != nil {
+				return err
+			}
 
-		case compiler.OpOr:
-			b, a := vm.pop(), vm.pop()
-			vm.push(BoolVal(isTruthy(a) || isTruthy(b)))
+		case core.OpGreaterEq:
+			if err := mathhandler.OpGreaterEq(vm, line, col); err != nil {
+				return err
+			}
 
-		case compiler.OpNot:
+		case core.OpAnd:
+			if err := mathhandler.OpAnd(vm, line, col); err != nil {
+				return err
+			}
+
+		case core.OpOr:
+			if err := mathhandler.OpOr(vm, line, col); err != nil {
+				return err
+			}
+
+		case core.OpNot:
 			v := vm.pop()
-			vm.push(BoolVal(!isTruthy(v)))
+			vm.push(core.BoolVal(!core.IsTruthy(v)))
 
-		case compiler.OpConcat:
-			b, a := vm.pop(), vm.pop()
-			vm.push(StringVal(a.String() + b.String()))
+		case core.OpConcat:
+			if err := mathhandler.OpConcat(vm, line, col); err != nil {
+				return err
+			}
 
-		case compiler.OpGetGlobal:
+		case core.OpGetGlobal:
 			name := chunk.Constants[inst.Operand].(string)
 			val, ok := vm.globals[name]
 			if !ok {
@@ -359,411 +240,124 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			}
 			vm.push(val)
 
-		case compiler.OpSetGlobal:
+		case core.OpSetGlobal:
 			name := chunk.Constants[inst.Operand].(string)
-			vm.globals[name] = vm.pop()
-
-		case compiler.OpGetLocal:
-			bp := 0
-			if len(vm.frames) > 0 {
-				bp = vm.frames[len(vm.frames)-1].bp
-			}
-			vm.push(vm.stack[bp+inst.Operand])
-
-		case compiler.OpSetLocal:
-			bp := 0
-			if len(vm.frames) > 0 {
-				bp = vm.frames[len(vm.frames)-1].bp
-			}
-			val := vm.pop()
-			idx := bp + inst.Operand
-			for idx >= len(vm.stack) {
-				vm.stack = append(vm.stack, UnknownValue)
-			}
-			vm.stack[idx] = val
-			if idx >= vm.sp {
-				vm.sp = idx + 1
-			}
-
-		case compiler.OpJump:
-			vm.ip = inst.Operand
-
-		case compiler.OpJumpIfFalse:
-			cond := vm.pop()
-			if !isTruthy(cond) {
-				vm.ip = inst.Operand
-			}
-
-		case compiler.OpLoop:
-			vm.ip = inst.Operand
-
-		case compiler.OpArray:
-			count := inst.Operand
-			arr := make([]Value, count)
-			for i := count - 1; i >= 0; i-- {
-				arr[i] = vm.pop()
-			}
-			vm.push(ArrayVal(arr))
-
-		case compiler.OpMap:
-			count := inst.Operand
-			m := make(map[string]Value, count)
-			for i := 0; i < count; i++ {
-				val := vm.pop()
-				key := vm.pop()
-				m[key.String()] = val
-			}
-			vm.push(MapVal(m))
-
-		case compiler.OpIndex:
-			idx := vm.pop()
-			obj := vm.pop()
-			switch obj.Type {
-			case ValArray:
-				arr := obj.Data.([]Value)
-				i := int(idx.Data.(float64))
-				if i < 0 || i >= len(arr) {
-					return vm.runtimeErr("E300", line, col, "bounds %d", i)
-				}
-				vm.push(arr[i])
-			case ValMap:
-				m := obj.Data.(map[string]Value)
-				key := idx.String()
-				if val, ok := m[key]; ok {
-					vm.push(val)
-				} else {
-					vm.push(UnknownValue)
-				}
-			case ValString:
-				s := obj.Data.(string)
-				i := int(idx.Data.(float64))
-				if i < 0 || i >= len(s) {
-					return vm.runtimeErr("E300", line, col, "bounds %d", i)
-				}
-				vm.push(StringVal(string(s[i])))
-			default:
-				return vm.runtimeErr("E300", line, col, "want array|map")
-			}
-
-		case compiler.OpSetIndex:
-			val := vm.pop()
-			idx := vm.pop()
-			obj := vm.pop()
-			switch obj.Type {
-			case ValArray:
-				arr := obj.Data.([]Value)
-				i := int(idx.Data.(float64))
-				if i < 0 || i >= len(arr) {
-					return vm.runtimeErr("E300", line, col, "bounds %d", i)
-				}
-				arr[i] = val
-			case ValMap:
-				m := obj.Data.(map[string]Value)
-				m[idx.String()] = val
-			default:
-				return vm.runtimeErr("E300", line, col, "want array|map")
-			}
-
-		case compiler.OpDotGet:
-			field := chunk.Constants[inst.Operand].(string)
-			obj := vm.pop()
-
-			if obj.Type == ValInstance {
-				instObj := obj.Data.(*Instance)
-				if m, ok := instObj.Class.Methods[field]; ok {
-					// It's a method!
-					if m.Visibility == "pv" {
-						// For now we don't track caller context, so we just allow it or fail.
-						// To strictly enforce pv, we'd need to know if we are inside the class.
-						// We'll skip strict enforcement for this MVP test.
-					}
-					vm.push(Value{ValBoundMethod, &BoundMethod{Instance: instObj, Method: m}})
-					continue
-				}
-				if val, ok := instObj.Fields[field]; ok {
-					vm.push(val)
-				} else {
-					vm.push(UnknownValue)
-				}
-				continue
-			}
-
-			if obj.Type == ValStructInstance {
-				m := obj.Data.(map[string]Value)
-				if val, ok := m[field]; ok {
-					vm.push(val)
-				} else {
-					vm.push(UnknownValue)
-				}
-				continue
-			}
-
-			if obj.Type != ValMap {
-				return vm.runtimeErr("E300", line, col, "want map or instance")
-			}
-			m := obj.Data.(map[string]Value)
-			if val, ok := m[field]; ok {
-				vm.push(val)
-			} else {
-				vm.push(UnknownValue)
-			}
-
-		case compiler.OpDotSet:
-			field := chunk.Constants[inst.Operand].(string)
-			val := vm.pop()
-			obj := vm.pop()
-
-			if obj.Type == ValInstance {
-				instObj := obj.Data.(*Instance)
-				instObj.Fields[field] = val
-				continue
-			}
-
-			if obj.Type == ValStructInstance {
-				m := obj.Data.(map[string]Value)
-				m[field] = val
-				continue
-			}
-
-			if obj.Type != ValMap {
-				return vm.runtimeErr("E300", line, col, "want map or instance")
-			}
-			obj.Data.(map[string]Value)[field] = val
-
-		case compiler.OpPrint:
-			v := vm.pop()
-			fmt.Println(v.String())
-
-		case compiler.OpInput:
-			if inst.Operand > 0 {
-				prompt := vm.pop()
-				fmt.Print(prompt.String())
-			}
-			if vm.stdinScanner == nil {
-				vm.stdinScanner = bufio.NewScanner(os.Stdin)
-			}
-			var input string
-			if vm.stdinScanner.Scan() {
-				input = strings.TrimSpace(vm.stdinScanner.Text())
-			}
-			vm.push(StringVal(input))
-
-		case compiler.OpClosure:
-			fn := chunk.Constants[inst.Operand].(*compiler.CompiledFn)
-			vm.push(FnVal(fn))
-
-		case compiler.OpCall:
-			argCount := inst.Operand
-			callee := vm.stack[vm.sp-argCount-1]
-
-			if callee.Type == ValStructDef {
-				def := callee.Data.(compiler.StructDef)
-				if argCount != len(def.Fields) {
-					return vm.runtimeErr("E300", line, col, "want %d args for struct", len(def.Fields))
-				}
-				fields := make(map[string]Value)
-				fields["__struct__"] = StringVal(def.Name)
-				for i := 0; i < argCount; i++ {
-					fields[def.Fields[i]] = vm.stack[vm.sp-argCount+i]
-				}
-				vm.sp -= argCount + 1
-				vm.push(Value{ValStructInstance, fields})
-				continue
-			}
-
-			if callee.Type == ValClass {
-				def := callee.Data.(compiler.ClassDef)
-				inst := &Instance{
-					Class:  def,
-					Fields: make(map[string]Value),
-				}
-				// Call init if present
-				if initM, hasInit := def.Methods["init"]; hasInit {
-					// We need to set up a call frame for the init method.
-					// But we also need to bind `this` to the instance!
-					// How does `this` work? We will put the instance in the local variables!
-					// Actually, the instance itself is the callee in the stack. Let's replace the callee with the instance!
-					vm.stack[vm.sp-argCount-1] = Value{ValInstance, inst}
-
-					frame := callFrame{
-						fn:    &compiler.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount}, // mock fn just for the frame
-						ip:    vm.ip,
-						bp:    vm.sp - argCount - 1, // 'this' is at sp - argCount - 1
-						chunk: chunk,
-					}
-					vm.frames = append(vm.frames, frame)
-
-					savedIP := vm.ip
-					savedChunk := chunk
-					err := vm.execute(initM.Chunk)
-					if err != nil {
-						return err // simple error handling for now
-					}
-
-					vm.frames = vm.frames[:len(vm.frames)-1]
-					// init returns nothing (or unknown), pop it
-					vm.pop()
-
-					vm.sp = frame.bp
-					if vm.sp < 0 {
-						vm.sp = 0
-					}
-					vm.push(Value{ValInstance, inst})
-
-					vm.ip = savedIP
-					chunk = savedChunk
-					vm.chunk = chunk
-					continue
-				} else {
-					if argCount > 0 {
-						return vm.runtimeErr("E300", line, col, "class has no init but got args")
-					}
-					vm.sp -= argCount + 1
-					vm.push(Value{ValInstance, inst})
-					continue
-				}
-			}
-
-			if callee.Type == ValBoundMethod {
-				bound := callee.Data.(*BoundMethod)
-				// Replace callee with instance so 'this' is at local 0
-				vm.stack[vm.sp-argCount-1] = Value{ValInstance, bound.Instance}
-
-				fn := &compiler.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount}
-
-				frame := callFrame{
-					fn:    fn,
-					ip:    vm.ip,
-					bp:    vm.sp - argCount - 1, // 'this' is at sp - argCount - 1
-					chunk: chunk,
-				}
-				vm.frames = append(vm.frames, frame)
-
-				savedIP := vm.ip
-				savedChunk := chunk
-				err := vm.execute(bound.Method.Chunk)
-				if err != nil {
-					// Check try/catch (omitted for brevity)
-					return err
-				}
-
-				vm.frames = vm.frames[:len(vm.frames)-1]
-				result := vm.pop()
-
-				vm.sp = frame.bp
-				if vm.sp < 0 {
-					vm.sp = 0
-				}
-				vm.push(result)
-
-				vm.ip = savedIP
-				chunk = savedChunk
-				vm.chunk = chunk
-				continue
-			}
-
-			if callee.Type != ValFn {
-				return vm.runtimeErr("E300", line, col, "want fn")
-			}
-
-			fn := callee.Data.(*compiler.CompiledFn)
-			if argCount != fn.ParamCount {
-				fmt.Printf("DEBUG OpCall: argCount=%d, fn.ParamCount=%d\n", argCount, fn.ParamCount)
-				return vm.runtimeErr("E300", line, col, "want %d args", fn.ParamCount)
-			}
-
-			frame := callFrame{
-				fn:    fn,
-				ip:    vm.ip,
-				bp:    vm.sp - argCount,
-				chunk: chunk,
-			}
-			vm.frames = append(vm.frames, frame)
-
-			// Execute function chunk
-			savedIP := vm.ip
-			savedChunk := chunk
-			err := vm.execute(fn.Chunk)
-			if err != nil {
-				// Check try/catch
-				if len(vm.tryStack) > 0 {
-					tf := vm.tryStack[len(vm.tryStack)-1]
-					vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
-					vm.sp = tf.sp
-					// Push the actual error string
-					vm.push(StringVal(err.Error()))
-					vm.ip = tf.catchIP
-					chunk = savedChunk
-					vm.chunk = chunk
-					// Pop frames until we reach the try block's frame depth
-					for len(vm.frames) > tf.frameDepth {
-						vm.frames = vm.frames[:len(vm.frames)-1]
-					}
-					continue
-				}
+			if err := varhandler.OpSetGlobal(vm, name, line, col); err != nil {
 				return err
 			}
 
-			// Pop frame
-			vm.frames = vm.frames[:len(vm.frames)-1]
-			result := vm.pop()
-
-			// Clean up stack: remove function + args
-			vm.sp = frame.bp - 1
-			if vm.sp < 0 {
-				vm.sp = 0
+		case core.OpGetLocal:
+			if err := varhandler.OpGetLocal(vm, inst.Operand, line, col); err != nil {
+				return err
 			}
-			vm.push(result)
 
-			vm.ip = savedIP
-			chunk = savedChunk
-			vm.chunk = chunk
+		case core.OpSetLocal:
+			if err := varhandler.OpSetLocal(vm, inst.Operand, line, col); err != nil {
+				return err
+			}
 
-		case compiler.OpReturn:
+		case core.OpJump:
+			if err := controlhandler.OpJump(vm, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpJumpIfFalse:
+			if err := controlhandler.OpJumpIfFalse(vm, inst.Operand); err != nil {
+				return err
+			}
+		
+		case core.OpJumpIfNotUnknown:
+			if err := controlhandler.OpJumpIfNotUnknown(vm, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpLoop:
+			if err := controlhandler.OpLoop(vm, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpArray:
+			if err := colshandler.OpArray(vm, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpMap:
+			if err := colshandler.OpMap(vm, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpIndex:
+			if err := colshandler.OpIndex(vm, line, col); err != nil {
+				return err
+			}
+
+		case core.OpSetIndex:
+			if err := colshandler.OpSetIndex(vm, line, col); err != nil {
+				return err
+			}
+
+		case core.OpDotGet:
+			field := chunk.Constants[inst.Operand].(string)
+			if err := classhandler.OpDotGet(vm, line, col, field, false); err != nil {
+				return err
+			}
+			
+		case core.OpOptDotGet:
+			field := chunk.Constants[inst.Operand].(string)
+			if err := classhandler.OpDotGet(vm, line, col, field, true); err != nil {
+				return err
+			}
+
+		case core.OpDotSet:
+			field := chunk.Constants[inst.Operand].(string)
+			if err := classhandler.OpDotSet(vm, line, col, field); err != nil {
+				return err
+			}
+		case core.OpClosure:
+			fn := chunk.Constants[inst.Operand].(*core.CompiledFn)
+			if err := functionhandler.OpClosure(vm, fn); err != nil {
+				return err
+			}
+
+		case core.OpCall:
+			if err := functionhandler.OpCall(vm, line, col, inst.Operand); err != nil {
+				return err
+			}
+
+		case core.OpReturn:
 			if len(vm.frames) > 0 {
 				return nil // return from function execution
 			}
 			// Top-level rev = exit
 			return nil
 
-		case compiler.OpTry:
-			vm.tryStack = append(vm.tryStack, tryFrame{
-				catchIP:    inst.Operand,
-				sp:         vm.sp,
-				frameDepth: len(vm.frames),
-			})
-
-		case compiler.OpEndTry:
-			if len(vm.tryStack) > 0 {
-				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
-			}
-
-		case compiler.OpThrow:
-			v := vm.pop()
-			if len(vm.tryStack) > 0 {
-				tf := vm.tryStack[len(vm.tryStack)-1]
-				if tf.frameDepth == len(vm.frames) {
-					vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
-					vm.sp = tf.sp
-					vm.push(v)
-					vm.ip = tf.catchIP
-					continue
-				}
-			}
-			return fmt.Errorf("%s", v.String())
-
-		case compiler.OpBuiltin:
-			if err := vm.executeBuiltin(compiler.BuiltinID(inst.Operand), inst.Operand2, line, col); err != nil {
+		case core.OpTry:
+			if err := errorhandler.OpTry(vm, inst.Operand); err != nil {
 				return err
 			}
 
-		case compiler.OpGetLoopCounter:
+		case core.OpEndTry:
+			if err := errorhandler.OpEndTry(vm); err != nil {
+				return err
+			}
+
+		case core.OpThrow:
+			if err := errorhandler.OpThrow(vm); err != nil {
+				return err
+			}
+
+		case core.OpBuiltin:
+			if err := vm.executeBuiltin(core.BuiltinID(inst.Operand), inst.Operand2, line, col); err != nil {
+				return err
+			}
+
+		case core.OpGetLoopCounter:
 			// handled via locals
 
-		case compiler.OpAsync:
+		case core.OpAsync:
 			// simplified: just execute normally for now
 
-		case compiler.OpAwait:
+		case core.OpAwait:
 			// simplified: value is already on stack
 		}
 	}
@@ -771,50 +365,50 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 	return nil
 }
 
-func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int) error {
-	args := make([]Value, argCount)
+func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) error {
+	args := make([]core.Value, argCount)
 	for i := argCount - 1; i >= 0; i-- {
 		args[i] = vm.pop()
 	}
 
-	var result Value
+	var result core.Value
 
 	switch id {
-	case compiler.BuiltinLen:
+	case core.BuiltinLen:
 		if len(args) != 1 {
 			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
 		switch args[0].Type {
-		case ValString:
-			result = NumberVal(float64(len(args[0].Data.(string))))
-		case ValArray:
-			result = NumberVal(float64(len(args[0].Data.([]Value))))
-		case ValMap:
-			result = NumberVal(float64(len(args[0].Data.(map[string]Value))))
+		case core.ValString:
+			result = core.NumberVal(float64(len(args[0].Data.(string))))
+		case core.ValArray:
+			result = core.NumberVal(float64(len(args[0].Data.([]core.Value))))
+		case core.ValMap:
+			result = core.NumberVal(float64(len(args[0].Data.(map[string]core.Value))))
 		default:
 			return vm.runtimeErr("E300", line, col, "want string|array|map")
 		}
 
-	case compiler.BuiltinGet:
+	case core.BuiltinGet:
 		if len(args) != 1 {
 			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
-		result = StringVal(args[0].Type)
+		result = core.StringVal(args[0].Type)
 
-	case compiler.BuiltinAdd:
+	case core.BuiltinAdd:
 		if len(args) != 2 {
 			return vm.runtimeErr("E300", line, col, "want 2 args")
 		}
-		if args[0].Type != ValArray {
+		if args[0].Type != core.ValArray {
 			return vm.runtimeErr("E300", line, col, "want array")
 		}
-		arr := args[0].Data.([]Value)
+		arr := args[0].Data.([]core.Value)
 		arr = append(arr, args[1])
 		// Modify in place via globals would need ref semantics.
 		// For now, push new array.
-		result = ArrayVal(arr)
+		result = core.ArrayVal(arr)
 
-	case compiler.BuiltinNum:
+	case core.BuiltinNum:
 		if len(args) != 1 {
 			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
@@ -822,103 +416,103 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "bad number")
 		}
-		result = NumberVal(f)
+		result = core.NumberVal(f)
 
-	case compiler.BuiltinStr:
+	case core.BuiltinStr:
 		if len(args) != 1 {
 			return vm.runtimeErr("E300", line, col, "want 1 arg")
 		}
-		result = StringVal(args[0].String())
+		result = core.StringVal(args[0].String())
 
-	case compiler.BuiltinAbs:
-		if len(args) != 1 || args[0].Type != ValNumber {
+	case core.BuiltinAbs:
+		if len(args) != 1 || args[0].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want number")
 		}
-		result = NumberVal(math.Abs(args[0].Data.(float64)))
+		result = core.NumberVal(math.Abs(args[0].Data.(float64)))
 
-	case compiler.BuiltinMin:
-		if len(args) != 2 || args[0].Type != ValNumber || args[1].Type != ValNumber {
+	case core.BuiltinMin:
+		if len(args) != 2 || args[0].Type != core.ValNumber || args[1].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want 2 numbers")
 		}
-		result = NumberVal(math.Min(args[0].Data.(float64), args[1].Data.(float64)))
+		result = core.NumberVal(math.Min(args[0].Data.(float64), args[1].Data.(float64)))
 
-	case compiler.BuiltinMax:
-		if len(args) != 2 || args[0].Type != ValNumber || args[1].Type != ValNumber {
+	case core.BuiltinMax:
+		if len(args) != 2 || args[0].Type != core.ValNumber || args[1].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want 2 numbers")
 		}
-		result = NumberVal(math.Max(args[0].Data.(float64), args[1].Data.(float64)))
+		result = core.NumberVal(math.Max(args[0].Data.(float64), args[1].Data.(float64)))
 
-	case compiler.BuiltinRnd:
-		if len(args) != 1 || args[0].Type != ValNumber {
+	case core.BuiltinRnd:
+		if len(args) != 1 || args[0].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want number")
 		}
-		result = NumberVal(math.Round(args[0].Data.(float64)))
+		result = core.NumberVal(math.Round(args[0].Data.(float64)))
 
-	case compiler.BuiltinCap:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinCap:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want string")
 		}
-		result = StringVal(strings.ToUpper(args[0].Data.(string)))
+		result = core.StringVal(strings.ToUpper(args[0].Data.(string)))
 
-	case compiler.BuiltinLow:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinLow:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want string")
 		}
-		result = StringVal(strings.ToLower(args[0].Data.(string)))
+		result = core.StringVal(strings.ToLower(args[0].Data.(string)))
 
-	case compiler.BuiltinTrm:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinTrm:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want string")
 		}
-		result = StringVal(strings.TrimSpace(args[0].Data.(string)))
+		result = core.StringVal(strings.TrimSpace(args[0].Data.(string)))
 
-	case compiler.BuiltinSpl:
-		if len(args) != 2 || args[0].Type != ValString || args[1].Type != ValString {
+	case core.BuiltinSpl:
+		if len(args) != 2 || args[0].Type != core.ValString || args[1].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want 2 strings")
 		}
 		parts := strings.Split(args[0].Data.(string), args[1].Data.(string))
-		arr := make([]Value, len(parts))
+		arr := make([]core.Value, len(parts))
 		for i, p := range parts {
-			arr[i] = StringVal(p)
+			arr[i] = core.StringVal(p)
 		}
-		result = ArrayVal(arr)
+		result = core.ArrayVal(arr)
 
-	case compiler.BuiltinJ:
-		if len(args) != 2 || args[0].Type != ValArray || args[1].Type != ValString {
+	case core.BuiltinJ:
+		if len(args) != 2 || args[0].Type != core.ValArray || args[1].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want array, string")
 		}
-		arr := args[0].Data.([]Value)
+		arr := args[0].Data.([]core.Value)
 		strs := make([]string, len(arr))
 		for i, v := range arr {
 			strs[i] = v.String()
 		}
-		result = StringVal(strings.Join(strs, args[1].Data.(string)))
+		result = core.StringVal(strings.Join(strs, args[1].Data.(string)))
 
-	case compiler.BuiltinMod:
-		if len(args) != 3 || args[0].Type != ValString || args[1].Type != ValString || args[2].Type != ValString {
+	case core.BuiltinMod:
+		if len(args) != 3 || args[0].Type != core.ValString || args[1].Type != core.ValString || args[2].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want 3 strings")
 		}
-		result = StringVal(strings.ReplaceAll(args[0].Data.(string), args[1].Data.(string), args[2].Data.(string)))
+		result = core.StringVal(strings.ReplaceAll(args[0].Data.(string), args[1].Data.(string), args[2].Data.(string)))
 
-	case compiler.BuiltinHas:
+	case core.BuiltinHas:
 		if len(args) != 2 {
 			return vm.runtimeErr("E300", line, col, "want 2 args")
 		}
 		switch args[0].Type {
-		case ValString:
-			if args[1].Type != ValString {
+		case core.ValString:
+			if args[1].Type != core.ValString {
 				return vm.runtimeErr("E300", line, col, "want string arg")
 			}
-			result = BoolVal(strings.Contains(args[0].Data.(string), args[1].Data.(string)))
-		case ValMap:
-			if args[1].Type != ValString {
+			result = core.BoolVal(strings.Contains(args[0].Data.(string), args[1].Data.(string)))
+		case core.ValMap:
+			if args[1].Type != core.ValString {
 				return vm.runtimeErr("E300", line, col, "want string key")
 			}
-			m := args[0].Data.(map[string]Value)
+			m := args[0].Data.(map[string]core.Value)
 			_, ok := m[args[1].Data.(string)]
-			result = BoolVal(ok)
-		case ValArray:
-			arr := args[0].Data.([]Value)
+			result = core.BoolVal(ok)
+		case core.ValArray:
+			arr := args[0].Data.([]core.Value)
 			found := false
 			for _, v := range arr {
 				if v.String() == args[1].String() {
@@ -926,111 +520,111 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 					break
 				}
 			}
-			result = BoolVal(found)
+			result = core.BoolVal(found)
 		default:
 			return vm.runtimeErr("E300", line, col, "want str|map|arr")
 		}
 
-	case compiler.BuiltinSort:
-		if len(args) != 1 || args[0].Type != ValArray {
+	case core.BuiltinSort:
+		if len(args) != 1 || args[0].Type != core.ValArray {
 			return vm.runtimeErr("E300", line, col, "want array")
 		}
-		arr := make([]Value, len(args[0].Data.([]Value)))
-		copy(arr, args[0].Data.([]Value))
+		arr := make([]core.Value, len(args[0].Data.([]core.Value)))
+		copy(arr, args[0].Data.([]core.Value))
 		sort.Slice(arr, func(i, j int) bool {
-			if arr[i].Type == ValNumber && arr[j].Type == ValNumber {
+			if arr[i].Type == core.ValNumber && arr[j].Type == core.ValNumber {
 				return arr[i].Data.(float64) < arr[j].Data.(float64)
 			}
 			return arr[i].String() < arr[j].String()
 		})
-		result = ArrayVal(arr)
+		result = core.ArrayVal(arr)
 
-	case compiler.BuiltinPop:
-		if len(args) != 1 || args[0].Type != ValArray {
+	case core.BuiltinPop:
+		if len(args) != 1 || args[0].Type != core.ValArray {
 			return vm.runtimeErr("E300", line, col, "want array")
 		}
-		arr := args[0].Data.([]Value)
+		arr := args[0].Data.([]core.Value)
 		if len(arr) == 0 {
 			return vm.runtimeErr("E300", line, col, "empty array")
 		}
 		result = arr[len(arr)-1]
 
-	case compiler.BuiltinRm:
-		if len(args) != 2 || args[0].Type != ValArray || args[1].Type != ValNumber {
+	case core.BuiltinRm:
+		if len(args) != 2 || args[0].Type != core.ValArray || args[1].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want array, number")
 		}
-		arr := args[0].Data.([]Value)
+		arr := args[0].Data.([]core.Value)
 		idx := int(args[1].Data.(float64))
 		if idx < 0 || idx >= len(arr) {
 			return vm.runtimeErr("E300", line, col, "bounds %d", idx)
 		}
-		newArr := make([]Value, 0, len(arr)-1)
+		newArr := make([]core.Value, 0, len(arr)-1)
 		newArr = append(newArr, arr[:idx]...)
 		newArr = append(newArr, arr[idx+1:]...)
-		result = ArrayVal(newArr)
+		result = core.ArrayVal(newArr)
 
-	case compiler.BuiltinKey:
-		if len(args) != 1 || args[0].Type != ValMap {
+	case core.BuiltinKey:
+		if len(args) != 1 || args[0].Type != core.ValMap {
 			return vm.runtimeErr("E300", line, col, "want map")
 		}
-		m := args[0].Data.(map[string]Value)
-		keys := make([]Value, 0, len(m))
+		m := args[0].Data.(map[string]core.Value)
+		keys := make([]core.Value, 0, len(m))
 		for k := range m {
-			keys = append(keys, StringVal(k))
+			keys = append(keys, core.StringVal(k))
 		}
-		result = ArrayVal(keys)
+		result = core.ArrayVal(keys)
 
-	case compiler.BuiltinVal:
-		if len(args) != 1 || args[0].Type != ValMap {
+	case core.BuiltinVal:
+		if len(args) != 1 || args[0].Type != core.ValMap {
 			return vm.runtimeErr("E300", line, col, "want map")
 		}
-		m := args[0].Data.(map[string]Value)
-		vals := make([]Value, 0, len(m))
+		m := args[0].Data.(map[string]core.Value)
+		vals := make([]core.Value, 0, len(m))
 		for _, v := range m {
 			vals = append(vals, v)
 		}
-		result = ArrayVal(vals)
+		result = core.ArrayVal(vals)
 
-	case compiler.BuiltinRan:
-		result = NumberVal(rand.Float64())
+	case core.BuiltinRan:
+		result = core.NumberVal(rand.Float64())
 
-	case compiler.BuiltinQ:
-		if len(args) != 1 || args[0].Type != ValNumber {
+	case core.BuiltinQ:
+		if len(args) != 1 || args[0].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want number")
 		}
 		ms := int(args[0].Data.(float64))
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		result = UnknownValue
+		result = core.UnknownValue
 
-	case compiler.BuiltinR:
-		if len(args) < 1 || args[0].Type != ValString {
+	case core.BuiltinR:
+		if len(args) < 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want string")
 		}
 		data, err := os.ReadFile(args[0].Data.(string))
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "read fail")
 		}
-		result = StringVal(string(data))
+		result = core.StringVal(string(data))
 
-	case compiler.BuiltinW:
-		if len(args) != 2 || args[0].Type != ValString {
+	case core.BuiltinW:
+		if len(args) != 2 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want path, data")
 		}
 		err := os.WriteFile(args[0].Data.(string), []byte(args[1].String()), 0644)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "write fail")
 		}
-		result = BoolVal(true)
+		result = core.BoolVal(true)
 
-	case compiler.BuiltinOp:
+	case core.BuiltinOp:
 		if len(args) < 2 {
 			return vm.runtimeErr("E300", line, col, "want port, handler")
 		}
 		port := args[0].String()
-		if args[1].Type != ValFn {
+		if args[1].Type != core.ValFn {
 			return vm.runtimeErr("E300", line, col, "want handler function")
 		}
-		handlerFn := args[1].Data.(*compiler.CompiledFn)
+		handlerFn := args[1].Data.(*core.CompiledFn)
 
 		mode := "uni"
 		if len(args) > 2 {
@@ -1038,7 +632,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		}
 
 		maxWorkers := 100
-		if len(args) > 3 && args[3].Type == ValNumber {
+		if len(args) > 3 && args[3].Type == core.ValNumber {
 			maxWorkers = int(args[3].Data.(float64))
 		}
 
@@ -1055,7 +649,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 					chunk:   vm.chunk,
 					fns:     vm.fns,
 					globals: vm.globals, // shared!
-					stack:   make([]Value, 1024),
+					stack:   make([]core.Value, 1024),
 					sp:      0,
 					ip:      0,
 				}
@@ -1065,7 +659,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 				execVM = vm
 			}
 
-			reqMap := make(map[string]Value)
+			reqMap := make(map[string]core.Value)
 			method := r.Method
 			switch method {
 			case "GET":
@@ -1083,26 +677,26 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			case "HEAD":
 				method = "H"
 			}
-			reqMap["method"] = StringVal(method)
-			reqMap["path"] = StringVal(r.URL.Path)
+			reqMap["method"] = core.StringVal(method)
+			reqMap["path"] = core.StringVal(r.URL.Path)
 
 			bodyBytes, _ := io.ReadAll(r.Body)
-			reqMap["body"] = StringVal(string(bodyBytes))
+			reqMap["body"] = core.StringVal(string(bodyBytes))
 
-			queryMap := make(map[string]Value)
+			queryMap := make(map[string]core.Value)
 			for k, v := range r.URL.Query() {
 				if len(v) > 0 {
-					queryMap[k] = StringVal(v[0])
+					queryMap[k] = core.StringVal(v[0])
 				}
 			}
-			reqMap["query"] = Value{ValMap, queryMap}
+			reqMap["query"] = core.Value{core.ValMap, queryMap}
 
 			// Save old state if we are in uni mode
 			savedIP := execVM.ip
 			savedChunk := execVM.chunk
 
-			execVM.push(FnVal(handlerFn))
-			execVM.push(Value{ValMap, reqMap})
+			execVM.push(core.FnVal(handlerFn))
+			execVM.push(core.Value{core.ValMap, reqMap})
 
 			frame := callFrame{
 				fn:    handlerFn,
@@ -1114,7 +708,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 
 			err := execVM.execute(handlerFn.Chunk)
 
-			var res Value
+			var res core.Value
 			if err == nil {
 				execVM.frames = execVM.frames[:len(execVM.frames)-1]
 				res = execVM.pop()
@@ -1130,9 +724,9 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 				return
 			}
 
-			if res.Type == ValMap {
-				m := res.Data.(map[string]Value)
-				if status, ok := m["status"]; ok && status.Type == ValNumber {
+			if res.Type == core.ValMap {
+				m := res.Data.(map[string]core.Value)
+				if status, ok := m["status"]; ok && status.Type == core.ValNumber {
 					w.WriteHeader(int(status.Data.(float64)))
 				}
 				if body, ok := m["body"]; ok {
@@ -1147,9 +741,9 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			return vm.runtimeErr("E300", line, col, "server error: %v", err)
 		}
-		result = BoolVal(true)
+		result = core.BoolVal(true)
 
-	case compiler.BuiltinDb:
+	case core.BuiltinDb:
 		if len(args) < 3 {
 			return vm.runtimeErr("E300", line, col, "want driver, dsn, query")
 		}
@@ -1165,9 +759,9 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 
 		var qargs []interface{}
 		for i := 3; i < len(args); i++ {
-			if args[i].Type == ValNumber {
+			if args[i].Type == core.ValNumber {
 				qargs = append(qargs, args[i].Data.(float64))
-			} else if args[i].Type == ValBool {
+			} else if args[i].Type == core.ValBool {
 				qargs = append(qargs, args[i].Data.(bool))
 			} else {
 				qargs = append(qargs, args[i].String())
@@ -1183,7 +777,7 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			defer rows.Close()
 
 			cols, _ := rows.Columns()
-			var resultArr []Value
+			var resultArr []core.Value
 
 			for rows.Next() {
 				columns := make([]interface{}, len(cols))
@@ -1196,35 +790,35 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 					return vm.runtimeErr("E300", line, col, "db scan err: %v", err)
 				}
 
-				rowMap := make(map[string]Value)
+				rowMap := make(map[string]core.Value)
 				for i, colName := range cols {
 					val := columns[i]
 					if val == nil {
-						rowMap[colName] = UnknownValue
+						rowMap[colName] = core.UnknownValue
 						continue
 					}
 					switch v := val.(type) {
 					case []byte:
-						rowMap[colName] = StringVal(string(v))
+						rowMap[colName] = core.StringVal(string(v))
 					case string:
-						rowMap[colName] = StringVal(v)
+						rowMap[colName] = core.StringVal(v)
 					case int64:
-						rowMap[colName] = NumberVal(float64(v))
+						rowMap[colName] = core.NumberVal(float64(v))
 					case int:
-						rowMap[colName] = NumberVal(float64(v))
+						rowMap[colName] = core.NumberVal(float64(v))
 					case int32:
-						rowMap[colName] = NumberVal(float64(v))
+						rowMap[colName] = core.NumberVal(float64(v))
 					case float64:
-						rowMap[colName] = NumberVal(v)
+						rowMap[colName] = core.NumberVal(v)
 					case bool:
-						rowMap[colName] = BoolVal(v)
+						rowMap[colName] = core.BoolVal(v)
 					default:
-						rowMap[colName] = StringVal(fmt.Sprintf("%v", v))
+						rowMap[colName] = core.StringVal(fmt.Sprintf("%v", v))
 					}
 				}
-				resultArr = append(resultArr, Value{ValMap, rowMap})
+				resultArr = append(resultArr, core.Value{core.ValMap, rowMap})
 			}
-			result = Value{ValArray, resultArr}
+			result = core.Value{core.ValArray, resultArr}
 		} else {
 			res, err := db.Exec(query, qargs...)
 			if err != nil {
@@ -1234,29 +828,29 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			lastId, _ := res.LastInsertId()
 			rowsAffected, _ := res.RowsAffected()
 
-			m := make(map[string]Value)
-			m["last_insert_id"] = NumberVal(float64(lastId))
-			m["rows_affected"] = NumberVal(float64(rowsAffected))
-			result = Value{ValMap, m}
+			m := make(map[string]core.Value)
+			m["last_insert_id"] = core.NumberVal(float64(lastId))
+			m["rows_affected"] = core.NumberVal(float64(rowsAffected))
+			result = core.Value{core.ValMap, m}
 		}
 
-	case compiler.BuiltinNow:
-		result = NumberVal(float64(time.Now().UnixMilli()))
+	case core.BuiltinNow:
+		result = core.NumberVal(float64(time.Now().UnixMilli()))
 
-	case compiler.BuiltinDate:
+	case core.BuiltinDate:
 		now := time.Now()
-		m := make(map[string]Value)
-		m["year"] = NumberVal(float64(now.Year()))
-		m["month"] = NumberVal(float64(now.Month()))
-		m["day"] = NumberVal(float64(now.Day()))
-		m["hour"] = NumberVal(float64(now.Hour()))
-		m["min"] = NumberVal(float64(now.Minute()))
-		m["sec"] = NumberVal(float64(now.Second()))
-		m["format"] = StringVal(now.Format("2006-01-02 15:04:05"))
-		result = Value{ValMap, m}
+		m := make(map[string]core.Value)
+		m["year"] = core.NumberVal(float64(now.Year()))
+		m["month"] = core.NumberVal(float64(now.Month()))
+		m["day"] = core.NumberVal(float64(now.Day()))
+		m["hour"] = core.NumberVal(float64(now.Hour()))
+		m["min"] = core.NumberVal(float64(now.Minute()))
+		m["sec"] = core.NumberVal(float64(now.Second()))
+		m["format"] = core.StringVal(now.Format("2006-01-02 15:04:05"))
+		result = core.Value{core.ValMap, m}
 
-	case compiler.BuiltinReq:
-		if len(args) < 1 || args[0].Type != ValString {
+	case core.BuiltinReq:
+		if len(args) < 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want url string")
 		}
 		reqURL := args[0].Data.(string)
@@ -1275,10 +869,10 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "read fail: %v", err)
 		}
-		result = StringVal(string(body))
+		result = core.StringVal(string(body))
 
-	case compiler.BuiltinJson:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinJson:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want json string")
 		}
 		// Simple JSON parser: converts JSON string to dryLang map/array
@@ -1289,28 +883,28 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		}
 		result = parsed
 
-	case compiler.BuiltinArg:
+	case core.BuiltinArg:
 		osArgs := os.Args
 		// Skip binary name and script name
 		startIdx := 2
 		if len(osArgs) > startIdx {
-			arr := make([]Value, len(osArgs)-startIdx)
+			arr := make([]core.Value, len(osArgs)-startIdx)
 			for i := startIdx; i < len(osArgs); i++ {
-				arr[i-startIdx] = StringVal(osArgs[i])
+				arr[i-startIdx] = core.StringVal(osArgs[i])
 			}
-			result = ArrayVal(arr)
+			result = core.ArrayVal(arr)
 		} else {
-			result = ArrayVal([]Value{})
+			result = core.ArrayVal([]core.Value{})
 		}
 
-	case compiler.BuiltinEnv:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinEnv:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want string")
 		}
-		result = StringVal(os.Getenv(args[0].Data.(string)))
+		result = core.StringVal(os.Getenv(args[0].Data.(string)))
 
-	case compiler.BuiltinCmd:
-		if len(args) < 1 || args[0].Type != ValString {
+	case core.BuiltinCmd:
+		if len(args) < 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want command string")
 		}
 		cmdStr := args[0].Data.(string)
@@ -1328,33 +922,33 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "cmd fail: %v\n%s", err, string(out))
 		}
-		result = StringVal(strings.TrimRight(string(out), "\n\r"))
+		result = core.StringVal(strings.TrimRight(string(out), "\n\r"))
 
-	case compiler.BuiltinDir:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinDir:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want path string")
 		}
 		entries, err := os.ReadDir(args[0].Data.(string))
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "dir fail: %v", err)
 		}
-		arr := make([]Value, len(entries))
+		arr := make([]core.Value, len(entries))
 		for i, e := range entries {
-			arr[i] = StringVal(e.Name())
+			arr[i] = core.StringVal(e.Name())
 		}
-		result = ArrayVal(arr)
+		result = core.ArrayVal(arr)
 
-	case compiler.BuiltinDel:
-		if len(args) != 1 || args[0].Type != ValString {
+	case core.BuiltinDel:
+		if len(args) != 1 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want path string")
 		}
 		err := os.Remove(args[0].Data.(string))
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "del fail: %v", err)
 		}
-		result = BoolVal(true)
+		result = core.BoolVal(true)
 
-	case compiler.BuiltinDie:
+	case core.BuiltinDie:
 		if len(args) > 0 {
 			msg := args[0].String()
 			if msg != "" {
@@ -1362,52 +956,63 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			}
 		}
 		os.Exit(1)
-		result = UnknownValue // unreachable
+		result = core.UnknownValue // unreachable
 
-	case compiler.BuiltinMath:
-		if len(args) < 2 || args[0].Type != ValString {
+	case core.BuiltinMath:
+		if len(args) < 2 || args[0].Type != core.ValString {
 			return vm.runtimeErr("E300", line, col, "want math(op, ...numbers)")
 		}
 		op := args[0].Data.(string)
-		if args[1].Type != ValNumber {
+		if args[1].Type != core.ValNumber {
 			return vm.runtimeErr("E300", line, col, "want number")
 		}
 		a := args[1].Data.(float64)
 		switch op {
 		case "sqrt":
-			result = NumberVal(math.Sqrt(a))
+			result = core.NumberVal(math.Sqrt(a))
 		case "pow":
-			if len(args) < 3 || args[2].Type != ValNumber {
+			if len(args) < 3 || args[2].Type != core.ValNumber {
 				return vm.runtimeErr("E300", line, col, "pow wants 2 numbers")
 			}
-			result = NumberVal(math.Pow(a, args[2].Data.(float64)))
+			result = core.NumberVal(math.Pow(a, args[2].Data.(float64)))
 		case "ceil":
-			result = NumberVal(math.Ceil(a))
+			result = core.NumberVal(math.Ceil(a))
 		case "floor":
-			result = NumberVal(math.Floor(a))
+			result = core.NumberVal(math.Floor(a))
 		case "sin":
-			result = NumberVal(math.Sin(a))
+			result = core.NumberVal(math.Sin(a))
 		case "cos":
-			result = NumberVal(math.Cos(a))
+			result = core.NumberVal(math.Cos(a))
 		case "tan":
-			result = NumberVal(math.Tan(a))
+			result = core.NumberVal(math.Tan(a))
 		case "log":
-			result = NumberVal(math.Log(a))
+			result = core.NumberVal(math.Log(a))
 		case "log10":
-			result = NumberVal(math.Log10(a))
+			result = core.NumberVal(math.Log10(a))
 		default:
 			return vm.runtimeErr("E300", line, col, "unknown math op: %s", op)
 		}
 
-	case compiler.BuiltinIn:
+	case core.BuiltinPt:
+		var strs []string
+		for _, arg := range args {
+			strs = append(strs, arg.String())
+		}
+		fmt.Println(strings.Join(strs, " "))
+		result = core.UnknownValue
+
+	case core.BuiltinIn:
+		if argCount > 0 {
+			fmt.Print(args[0].String())
+		}
 		if vm.stdinScanner == nil {
 			vm.stdinScanner = bufio.NewScanner(os.Stdin)
 		}
 		if vm.stdinScanner.Scan() {
 			text := strings.TrimSpace(vm.stdinScanner.Text())
-			result = StringVal(text)
+			result = core.StringVal(text)
 		} else {
-			result = StringVal("")
+			result = core.StringVal("")
 		}
 
 	default:
@@ -1418,54 +1023,223 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 	return nil
 }
 
-func valuesEqual(a, b Value) bool {
+func valuesEqual(a, b core.Value) bool {
 	if a.Type != b.Type {
 		return false
 	}
 	switch a.Type {
-	case ValNumber:
+	case core.ValNumber:
 		return a.Data.(float64) == b.Data.(float64)
-	case ValString:
+	case core.ValString:
 		return a.Data.(string) == b.Data.(string)
-	case ValBool:
+	case core.ValBool:
 		return a.Data.(bool) == b.Data.(bool)
-	case ValUnknown:
-		return b.Type == ValUnknown
+	case core.ValUnknown:
+		return b.Type == core.ValUnknown
 	}
 	return false
 }
 
-func parseJSON(input string) (Value, error) {
+func parseJSON(input string) (core.Value, error) {
 	var raw interface{}
 	if err := json.Unmarshal([]byte(input), &raw); err != nil {
-		return UnknownValue, err
+		return core.UnknownValue, err
 	}
 	return jsonToValue(raw), nil
 }
 
-func jsonToValue(v interface{}) Value {
+func jsonToValue(v interface{}) core.Value {
 	if v == nil {
-		return UnknownValue
+		return core.UnknownValue
 	}
 	switch val := v.(type) {
 	case float64:
-		return NumberVal(val)
+		return core.NumberVal(val)
 	case string:
-		return StringVal(val)
+		return core.StringVal(val)
 	case bool:
-		return BoolVal(val)
+		return core.BoolVal(val)
 	case []interface{}:
-		arr := make([]Value, len(val))
+		arr := make([]core.Value, len(val))
 		for i, item := range val {
 			arr[i] = jsonToValue(item)
 		}
-		return ArrayVal(arr)
+		return core.ArrayVal(arr)
 	case map[string]interface{}:
-		m := make(map[string]Value, len(val))
+		m := make(map[string]core.Value, len(val))
 		for k, item := range val {
 			m[k] = jsonToValue(item)
 		}
-		return MapVal(m)
+		return core.MapVal(m)
 	}
-	return UnknownValue
+	return core.UnknownValue
+}
+
+func (vm *VM) callOp(argCount, line, col int) error {
+	chunk := vm.chunk
+	callee := vm.stack[vm.sp-argCount-1]
+
+	if callee.Type == core.ValStructDef {
+		def := callee.Data.(core.StructDef)
+		if argCount != len(def.Fields) {
+			return vm.runtimeErr("E300", line, col, "want %d args for struct", len(def.Fields))
+		}
+		fields := make(map[string]core.Value)
+		fields["__struct__"] = core.StringVal(def.Name)
+		for i := 0; i < argCount; i++ {
+			fields[def.Fields[i]] = vm.stack[vm.sp-argCount+i]
+		}
+		vm.sp -= argCount + 1
+		vm.push(core.Value{Type: core.ValStructInstance, Data: fields})
+		return nil
+	}
+
+	if callee.Type == core.ValClass {
+		def := callee.Data.(core.ClassDef)
+		inst := &core.Instance{
+			Class:  def,
+			Fields: make(map[string]core.Value),
+		}
+		
+		// Initialize fields from all parents (DFS)
+		var initFields func(c *core.ClassDef)
+		initFields = func(c *core.ClassDef) {
+			for _, p := range c.Parents {
+				if p != nil {
+					initFields(p)
+				}
+			}
+			for _, fieldName := range c.Fields {
+				inst.Fields[fieldName] = core.UnknownValue
+			}
+		}
+		initFields(&def)
+
+		if initM, hasInit := def.Methods["init"]; hasInit {
+			vm.stack[vm.sp-argCount-1] = core.Value{Type: core.ValInstance, Data: inst}
+
+			frame := callFrame{
+				fn:    &core.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount},
+				ip:    vm.ip,
+				bp:    vm.sp - argCount - 1,
+				chunk: chunk,
+			}
+			vm.frames = append(vm.frames, frame)
+
+			savedIP := vm.ip
+			savedChunk := chunk
+			err := vm.execute(initM.Chunk)
+			if err != nil {
+				return err
+			}
+
+			vm.frames = vm.frames[:len(vm.frames)-1]
+			vm.pop() // init returns nothing
+
+			vm.sp = frame.bp
+			if vm.sp < 0 {
+				vm.sp = 0
+			}
+			vm.push(core.Value{Type: core.ValInstance, Data: inst})
+
+			vm.ip = savedIP
+			chunk = savedChunk
+			vm.chunk = chunk
+			return nil
+		} else {
+			if argCount > 0 {
+				return vm.runtimeErr("E300", line, col, "class has no init but got args")
+			}
+			vm.sp -= argCount + 1
+			vm.push(core.Value{Type: core.ValInstance, Data: inst})
+			return nil
+		}
+	}
+
+	if callee.Type == core.ValBoundMethod {
+		bound := callee.Data.(*core.BoundMethod)
+		vm.stack[vm.sp-argCount-1] = core.Value{Type: core.ValInstance, Data: bound.Instance}
+
+		fn := &core.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount}
+
+		frame := callFrame{
+			fn:    fn,
+			ip:    vm.ip,
+			bp:    vm.sp - argCount - 1,
+			chunk: chunk,
+		}
+		vm.frames = append(vm.frames, frame)
+
+		savedIP := vm.ip
+		savedChunk := chunk
+		err := vm.execute(bound.Method.Chunk)
+		if err != nil {
+			return err
+		}
+
+		vm.frames = vm.frames[:len(vm.frames)-1]
+		result := vm.pop()
+
+		vm.sp = frame.bp
+		if vm.sp < 0 {
+			vm.sp = 0
+		}
+		vm.push(result)
+
+		vm.ip = savedIP
+		chunk = savedChunk
+		vm.chunk = chunk
+		return nil
+	}
+
+	if callee.Type != core.ValFn {
+		return vm.runtimeErr("E300", line, col, "want fn")
+	}
+
+	fn := callee.Data.(*core.CompiledFn)
+	if argCount != fn.ParamCount {
+		return vm.runtimeErr("E300", line, col, "want %d args", fn.ParamCount)
+	}
+
+	frame := callFrame{
+		fn:    fn,
+		ip:    vm.ip,
+		bp:    vm.sp - argCount,
+		chunk: chunk,
+	}
+	vm.frames = append(vm.frames, frame)
+
+	savedIP := vm.ip
+	savedChunk := chunk
+	err := vm.execute(fn.Chunk)
+	if err != nil {
+		if len(vm.tryStack) > 0 {
+			tf := vm.tryStack[len(vm.tryStack)-1]
+			vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+			vm.sp = tf.sp
+			vm.push(core.StringVal(err.Error()))
+			vm.ip = tf.catchIP
+			chunk = savedChunk
+			vm.chunk = chunk
+			for len(vm.frames) > tf.frameDepth {
+				vm.frames = vm.frames[:len(vm.frames)-1]
+			}
+			return nil
+		}
+		return err
+	}
+
+	vm.frames = vm.frames[:len(vm.frames)-1]
+	result := vm.pop()
+
+	vm.sp = frame.bp - 1
+	if vm.sp < 0 {
+		vm.sp = 0
+	}
+	vm.push(result)
+
+	vm.ip = savedIP
+	chunk = savedChunk
+	vm.chunk = chunk
+	return nil
 }

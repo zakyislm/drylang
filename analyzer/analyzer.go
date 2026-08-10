@@ -1,12 +1,12 @@
 package analyzer
 
 import (
-	"drylang/parser"
+	"drylang/ast"
 	"fmt"
 )
 
 // Analyze validates the AST for dryLang rules.
-func Analyze(prog *parser.Program) error {
+func Analyze(prog *ast.Program) error {
 	a := &analyzer{
 		declared: make(map[string]declInfo),
 		used:     make(map[string]bool),
@@ -59,30 +59,30 @@ func (a *analyzer) errorf(line, col int, format string, args ...interface{}) err
 	return fmt.Errorf("%d:%d %s", line, col, fmt.Sprintf(format, args...))
 }
 
-func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
+func (a *analyzer) analyzeStmt(stmt ast.Stmt) error {
 	switch s := stmt.(type) {
-	case *parser.AssignStmt:
+	case *ast.AssignStmt:
 		a.declare(s.Name, s.Line, s.Col, false, false)
 		return a.analyzeExpr(s.Value)
 
-	case *parser.ConstDeclStmt:
+	case *ast.ConstDeclStmt:
 		if info, exists := a.declared[s.Name]; exists && info.isConst {
 			return a.errorf(s.Line, s.Col, "locked %s", s.Name)
 		}
 		a.declare(s.Name, s.Line, s.Col, true, false)
 		return a.analyzeExpr(s.Value)
 
-	case *parser.UnknownBoolStmt:
+	case *ast.UnknownBoolStmt:
 		a.declare(s.Name, s.Line, s.Col, false, false)
 		return nil
 
-	case *parser.PrintStmt:
+	case *ast.PrintStmt:
 		return a.analyzeExpr(s.Value)
 
-	case *parser.ExprStmt:
+	case *ast.ExprStmt:
 		return a.analyzeExpr(s.Expression)
 
-	case *parser.ReturnStmt:
+	case *ast.ReturnStmt:
 		if !a.inFn {
 			return a.errorf(s.Line, s.Col, "stray rev")
 		}
@@ -91,11 +91,11 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		}
 		return nil
 
-	case *parser.FnDeclStmt:
+	case *ast.FnDeclStmt:
 		a.declare(s.Name, s.Line, s.Col, false, false)
 		return a.analyzeFnBody(s.Params, s.Body, s.IsAsync)
 
-	case *parser.IfStmt:
+	case *ast.IfStmt:
 		if err := a.analyzeExpr(s.Condition); err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		}
 		return nil
 
-	case *parser.OnStmt:
+	case *ast.OnStmt:
 		if err := a.analyzeExpr(s.Value); err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		}
 		return nil
 
-	case *parser.LoopStmt:
+	case *ast.LoopStmt:
 		if s.Limit != nil {
 			if err := a.analyzeExpr(s.Limit); err != nil {
 				return err
@@ -155,19 +155,19 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		a.inLoop = prev
 		return nil
 
-	case *parser.DoneStmt:
+	case *ast.DoneStmt:
 		if !a.inLoop {
 			return a.errorf(s.Line, s.Col, "stray done")
 		}
 		return nil
 
-	case *parser.ConStmt:
+	case *ast.ConStmt:
 		if !a.inLoop {
 			return a.errorf(s.Line, s.Col, "stray con")
 		}
 		return nil
 
-	case *parser.TryStmt:
+	case *ast.TryStmt:
 		for _, stmt := range s.Body {
 			if err := a.analyzeStmt(stmt); err != nil {
 				return err
@@ -181,20 +181,20 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		}
 		return nil
 
-	case *parser.ThrowStmt:
+	case *ast.ThrowStmt:
 		return a.analyzeExpr(s.Value)
 
-	case *parser.UseStmt:
+	case *ast.UseStmt:
 		return nil
 
-	case *parser.PrivateStmt:
+	case *ast.PrivateStmt:
 		return a.analyzeStmt(s.Inner)
 
-	case *parser.StructDeclStmt:
+	case *ast.StructDeclStmt:
 		a.declare(s.Name, s.Line, s.Col, false, false)
 		return nil
 
-	case *parser.IndexAssignStmt:
+	case *ast.IndexAssignStmt:
 		if err := a.analyzeExpr(s.Object); err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 		}
 		return a.analyzeExpr(s.Value)
 
-	case *parser.DotAssignStmt:
+	case *ast.DotAssignStmt:
 		if err := a.analyzeExpr(s.Object); err != nil {
 			return err
 		}
@@ -213,18 +213,18 @@ func (a *analyzer) analyzeStmt(stmt parser.Stmt) error {
 	return nil
 }
 
-func (a *analyzer) analyzeExpr(expr parser.Expr) error {
+func (a *analyzer) analyzeExpr(expr ast.Expr) error {
 	switch e := expr.(type) {
-	case *parser.Ident:
+	case *ast.Ident:
 		a.markUsed(e.Name)
-	case *parser.BinaryExpr:
+	case *ast.BinaryExpr:
 		if err := a.analyzeExpr(e.Left); err != nil {
 			return err
 		}
 		return a.analyzeExpr(e.Right)
-	case *parser.UnaryExpr:
+	case *ast.UnaryExpr:
 		return a.analyzeExpr(e.Operand)
-	case *parser.CallExpr:
+	case *ast.CallExpr:
 		if err := a.analyzeExpr(e.Callee); err != nil {
 			return err
 		}
@@ -233,20 +233,20 @@ func (a *analyzer) analyzeExpr(expr parser.Expr) error {
 				return err
 			}
 		}
-	case *parser.IndexExpr:
+	case *ast.IndexExpr:
 		if err := a.analyzeExpr(e.Object); err != nil {
 			return err
 		}
 		return a.analyzeExpr(e.Index)
-	case *parser.DotExpr:
+	case *ast.DotExpr:
 		return a.analyzeExpr(e.Object)
-	case *parser.ArrayLit:
+	case *ast.ArrayLit:
 		for _, item := range e.Items {
 			if err := a.analyzeExpr(item); err != nil {
 				return err
 			}
 		}
-	case *parser.MapLit:
+	case *ast.MapLit:
 		for i := range e.Keys {
 			if err := a.analyzeExpr(e.Keys[i]); err != nil {
 				return err
@@ -255,26 +255,26 @@ func (a *analyzer) analyzeExpr(expr parser.Expr) error {
 				return err
 			}
 		}
-	case *parser.ArrowFnExpr:
+	case *ast.ArrowFnExpr:
 		return a.analyzeFnBody(e.Params, e.Body, false)
-	case *parser.StringInterp:
+	case *ast.StringInterp:
 		for _, part := range e.Parts {
 			if err := a.analyzeExpr(part); err != nil {
 				return err
 			}
 		}
-	case *parser.InputExpr:
+	case *ast.InputExpr:
 		if e.Prompt != nil {
 			return a.analyzeExpr(e.Prompt)
 		}
-	case *parser.StructInitExpr:
+	case *ast.StructInitExpr:
 		a.markUsed(e.TypeName)
 		for _, v := range e.Fields {
 			if err := a.analyzeExpr(v); err != nil {
 				return err
 			}
 		}
-	case *parser.AwaitExpr:
+	case *ast.AwaitExpr:
 		if !a.inAsync {
 			return a.errorf(e.Line, e.Col, "stray awt")
 		}
@@ -283,7 +283,7 @@ func (a *analyzer) analyzeExpr(expr parser.Expr) error {
 	return nil
 }
 
-func (a *analyzer) analyzeFnBody(params []string, body []parser.Stmt, isAsync bool) error {
+func (a *analyzer) analyzeFnBody(params []string, body []ast.Stmt, isAsync bool) error {
 	prevFn := a.inFn
 	prevAsync := a.inAsync
 	a.inFn = true

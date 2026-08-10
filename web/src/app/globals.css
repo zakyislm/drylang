@@ -29,7 +29,12 @@ body {
   line-height: 1.6;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Lora', serif;
   font-weight: 400;
   color: var(--text-primary);
@@ -67,7 +72,8 @@ a {
   font-weight: 300;
 }
 
-.btn-primary, .btn-outline {
+.btn-primary,
+.btn-outline {
   display: inline-block;
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
@@ -113,15 +119,18 @@ a {
   width: 10px;
   height: 10px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   border-left: 1px solid var(--border-color);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 0;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-primary);
 }
@@ -153,14 +162,15 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 103px; /* Exact height to pair with 1px border = 104px total */
+  height: 103px;
+  /* Exact height to pair with 1px border = 104px total */
 }
 
 .nav-logo {
   font-family: 'Lora', serif;
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffffff;
+  color: #f5f5f5;
 }
 
 .nav-links {
@@ -204,13 +214,14 @@ a {
   flex-direction: column;
   gap: 2rem;
   position: sticky;
-  top: 104px; /* Exactly at the bottom of Navbar */
+  top: 104px;
+  /* Exactly at the bottom of Navbar */
   height: calc(100vh - 104px);
   padding-top: 2rem;
   padding-bottom: 2rem;
   overflow-y: auto;
   /* Hide scrollbar for a cleaner look */
-  scrollbar-width: none; 
+  scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
@@ -257,9 +268,8 @@ a {
 }
 
 .docs-group-title {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
   color: var(--text-muted);
   font-weight: 600;
   margin-bottom: 0.5rem;
@@ -313,7 +323,7 @@ a {
 .markdown-body h5,
 .markdown-body h6 {
   font-family: 'Lora', serif;
-  color: #ffffff;
+  color: #f5f5f5;
   margin-top: 2em;
   margin-bottom: 1em;
   font-weight: 600;
@@ -416,9 +426,12 @@ a {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -465,34 +478,34 @@ a {
   .container {
     padding: 0 1rem;
   }
-  
+
   .title-huge {
     font-size: 3rem;
   }
-  
+
   .title-large {
     font-size: 2.5rem;
   }
-  
+
   .grid-metrics {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .grid-split {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  
+
   .flex-row-mobile-col {
     flex-direction: column;
     gap: 2rem;
   }
-  
+
   .docs-layout {
     flex-direction: column;
   }
-  
+
   .docs-sidebar {
     width: 100%;
     height: auto;
@@ -501,18 +514,19 @@ a {
     padding: 1rem;
     position: static;
   }
-  
+
   .mobile-only {
     display: block;
   }
-  
+
   .desktop-only {
     display: none !important;
   }
 
   /* Hamburger Menu Support */
   .nav-links {
-    display: none; /* Hidden by default on mobile, handled by React state */
+    display: none;
+    /* Hidden by default on mobile, handled by React state */
     position: absolute;
     top: 104px;
     left: 0;
@@ -528,12 +542,13 @@ a {
   .nav-links.open {
     display: flex;
   }
-  
+
   /* Download Page Overrides */
   .os-box-container {
     max-width: 100% !important;
   }
 }
+
 .docs-layout {
   display: flex;
   flex-direction: row;
@@ -555,6 +570,7 @@ a {
     gap: 0 !important;
     align-items: stretch !important;
   }
+
   .docs-main {
     padding-top: 0 !important;
   }

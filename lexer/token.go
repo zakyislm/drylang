@@ -37,8 +37,6 @@ const (
 	TOKEN_USE     // use
 	TOKEN_CL      // cl
 	TOKEN_UNKNOWN // unknown
-	TOKEN_PT      // pt
-	TOKEN_IN      // in
 
 	// Operators (1-char)
 	TOKEN_ASSIGN    // =
@@ -53,6 +51,8 @@ const (
 	TOKEN_OR        // |
 	TOKEN_NOT       // !
 	TOKEN_QUESTION  // ?
+	TOKEN_QMARK_DOT // ?.
+	TOKEN_QQ        // ??
 	TOKEN_DOT       // . (also comment delimiter)
 
 	// Operators (2-char)
@@ -60,6 +60,7 @@ const (
 	TOKEN_LT_EQ   // <=
 	TOKEN_GT_EQ   // >=
 	TOKEN_ARROW   // ->
+	TOKEN_LARROW  // <-
 
 	// Delimiters
 	TOKEN_LPAREN    // (
@@ -103,8 +104,6 @@ var tokenNames = map[TokenType]string{
 	TOKEN_USE:          "use",
 	TOKEN_CL:           "cl",
 	TOKEN_UNKNOWN:      "unknown",
-	TOKEN_PT:           "pt",
-	TOKEN_IN:           "in",
 	TOKEN_ASSIGN:       "=",
 	TOKEN_PLUS:         "+",
 	TOKEN_MINUS:        "-",
@@ -117,11 +116,14 @@ var tokenNames = map[TokenType]string{
 	TOKEN_OR:           "|",
 	TOKEN_NOT:          "!",
 	TOKEN_QUESTION:     "?",
+	TOKEN_QMARK_DOT:    "?.",
+	TOKEN_QQ:           "??",
 	TOKEN_DOT:          ".",
 	TOKEN_NOT_EQ:       "!=",
 	TOKEN_LT_EQ:        "<=",
 	TOKEN_GT_EQ:        ">=",
 	TOKEN_ARROW:        "->",
+	TOKEN_LARROW:       "<-",
 	TOKEN_LPAREN:       "(",
 	TOKEN_RPAREN:       ")",
 	TOKEN_LBRACE:       "{",
@@ -170,8 +172,6 @@ var keywords = map[string]TokenType{
 	"use":     TOKEN_USE,
 	"cl":      TOKEN_CL,
 	"unknown": TOKEN_UNKNOWN,
-	"pt":      TOKEN_PT,
-	"in":      TOKEN_IN,
 }
 
 // LookupIdent checks if an identifier is a keyword.
