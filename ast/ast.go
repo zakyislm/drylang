@@ -1,4 +1,4 @@
-package parser
+package ast
 
 import "drylang/lexer"
 
@@ -406,15 +406,43 @@ func (n *PrivateStmt) TokenLine() int { return n.Line }
 func (n *PrivateStmt) TokenCol() int  { return n.Col }
 
 type StructDeclStmt struct {
-	Name   string
-	Fields []string
-	Line   int
-	Col    int
+	Name       string
+	Fields     []string
+	Visibility string // "pub", "pv", or ""
+	Line       int
+	Col        int
 }
 
 func (n *StructDeclStmt) stmtNode()      {}
 func (n *StructDeclStmt) TokenLine() int { return n.Line }
 func (n *StructDeclStmt) TokenCol() int  { return n.Col }
+
+type ClassStmt struct {
+	Name       string
+	Fields     []string
+	Methods    []*MethodDecl
+	Visibility string // "pub", "pv", or ""
+	Line       int
+	Col        int
+}
+
+func (n *ClassStmt) stmtNode()      {}
+func (n *ClassStmt) TokenLine() int { return n.Line }
+func (n *ClassStmt) TokenCol() int  { return n.Col }
+
+type MethodDecl struct {
+	Name       string
+	Params     []string
+	Body       []Stmt
+	Visibility string // "pub", "pv", or ""
+	IsAsync    bool
+	Line       int
+	Col        int
+}
+
+func (n *MethodDecl) stmtNode()      {}
+func (n *MethodDecl) TokenLine() int { return n.Line }
+func (n *MethodDecl) TokenCol() int  { return n.Col }
 
 type StructInitExpr struct {
 	TypeName string

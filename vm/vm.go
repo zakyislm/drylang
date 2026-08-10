@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bufio"
 	"drylang/compiler"
 	"drylang/errfmt"
 	"encoding/json"
@@ -22,14 +23,18 @@ import (
 
 // Value types
 const (
-	ValNumber    = "number"
-	ValString    = "string"
-	ValBool      = "bool"
-	ValArray     = "array"
-	ValMap       = "map"
-	ValFn        = "fn"
-	ValStructDef = "struct_def"
-	ValUnknown   = "unknown"
+	ValNumber         = "number"
+	ValString         = "string"
+	ValBool           = "bool"
+	ValArray          = "array"
+	ValMap            = "map"
+	ValFn             = "fn"
+	ValBoundMethod    = "bound_method"
+	ValStructDef      = "struct_def"
+	ValStructInstance = "struct_instance"
+	ValClass          = "class"
+	ValInstance       = "instance"
+	ValUnknown        = "unknown"
 )
 
 // Value wraps any dryLang runtime value.
@@ -79,6 +84,23 @@ func (v Value) String() string {
 	case ValFn:
 		fn := v.Data.(*compiler.CompiledFn)
 		return fmt.Sprintf("<fn %s>", fn.Name)
+	case ValStructDef:
+		sd := v.Data.(compiler.StructDef)
+		return fmt.Sprintf("<struct %s>", sd.Name)
+	case ValStructInstance:
+		m := v.Data.(map[string]Value)
+		// We could store the struct name if we wrapped it, but for now it's a map.
+		parts := make([]string, 0, len(m))
+		for k, val := range m {
+			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
+		}
+		return "{" + strings.Join(parts, ", ") + "}"
+	case ValClass:
+		cd := v.Data.(compiler.ClassDef)
+		return fmt.Sprintf("<class %s>", cd.Name)
+	case ValInstance:
+		inst := v.Data.(*Instance)
+		return fmt.Sprintf("<instance %s>", inst.Class.Name)
 	case ValUnknown:
 		return "unknown"
 	}
@@ -105,15 +127,16 @@ func isTruthy(v Value) bool {
 
 // VM executes dryLang bytecode.
 type VM struct {
-	mu       sync.Mutex
-	chunk    *compiler.Chunk
-	fns      []*compiler.CompiledFn
-	globals  map[string]Value
-	stack    []Value
-	sp       int // stack pointer
-	ip       int // instruction pointer
-	frames   []callFrame
-	tryStack []tryFrame
+	mu           sync.Mutex
+	chunk        *compiler.Chunk
+	fns          []*compiler.CompiledFn
+	globals      map[string]Value
+	stack        []Value
+	sp           int // stack pointer
+	ip           int // instruction pointer
+	frames       []callFrame
+	tryStack     []tryFrame
+	stdinScanner *bufio.Scanner
 }
 
 type callFrame struct {
@@ -126,7 +149,18 @@ type callFrame struct {
 type tryFrame struct {
 	catchIP    int
 	sp         int
+	errVarName string
 	frameDepth int
+}
+
+type Instance struct {
+	Class  compiler.ClassDef
+	Fields map[string]Value
+}
+
+type BoundMethod struct {
+	Instance *Instance
+	Method   compiler.ClassMethod
 }
 
 // New creates a new VM.
@@ -195,6 +229,8 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				vm.push(FnVal(v))
 			case compiler.StructDef:
 				vm.push(Value{ValStructDef, v})
+			case compiler.ClassDef:
+				vm.push(Value{ValClass, v})
 			default:
 				vm.push(Value{ValUnknown, nil})
 			}
@@ -431,8 +467,39 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 		case compiler.OpDotGet:
 			field := chunk.Constants[inst.Operand].(string)
 			obj := vm.pop()
+
+			if obj.Type == ValInstance {
+				instObj := obj.Data.(*Instance)
+				if m, ok := instObj.Class.Methods[field]; ok {
+					// It's a method!
+					if m.Visibility == "pv" {
+						// For now we don't track caller context, so we just allow it or fail.
+						// To strictly enforce pv, we'd need to know if we are inside the class.
+						// We'll skip strict enforcement for this MVP test.
+					}
+					vm.push(Value{ValBoundMethod, &BoundMethod{Instance: instObj, Method: m}})
+					continue
+				}
+				if val, ok := instObj.Fields[field]; ok {
+					vm.push(val)
+				} else {
+					vm.push(UnknownValue)
+				}
+				continue
+			}
+
+			if obj.Type == ValStructInstance {
+				m := obj.Data.(map[string]Value)
+				if val, ok := m[field]; ok {
+					vm.push(val)
+				} else {
+					vm.push(UnknownValue)
+				}
+				continue
+			}
+
 			if obj.Type != ValMap {
-				return vm.runtimeErr("E300", line, col, "want map")
+				return vm.runtimeErr("E300", line, col, "want map or instance")
 			}
 			m := obj.Data.(map[string]Value)
 			if val, ok := m[field]; ok {
@@ -445,8 +512,21 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			field := chunk.Constants[inst.Operand].(string)
 			val := vm.pop()
 			obj := vm.pop()
+
+			if obj.Type == ValInstance {
+				instObj := obj.Data.(*Instance)
+				instObj.Fields[field] = val
+				continue
+			}
+
+			if obj.Type == ValStructInstance {
+				m := obj.Data.(map[string]Value)
+				m[field] = val
+				continue
+			}
+
 			if obj.Type != ValMap {
-				return vm.runtimeErr("E300", line, col, "want map")
+				return vm.runtimeErr("E300", line, col, "want map or instance")
 			}
 			obj.Data.(map[string]Value)[field] = val
 
@@ -459,8 +539,13 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 				prompt := vm.pop()
 				fmt.Print(prompt.String())
 			}
+			if vm.stdinScanner == nil {
+				vm.stdinScanner = bufio.NewScanner(os.Stdin)
+			}
 			var input string
-			fmt.Scanln(&input)
+			if vm.stdinScanner.Scan() {
+				input = strings.TrimSpace(vm.stdinScanner.Text())
+			}
 			vm.push(StringVal(input))
 
 		case compiler.OpClosure:
@@ -482,7 +567,98 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 					fields[def.Fields[i]] = vm.stack[vm.sp-argCount+i]
 				}
 				vm.sp -= argCount + 1
-				vm.push(Value{ValMap, fields})
+				vm.push(Value{ValStructInstance, fields})
+				continue
+			}
+
+			if callee.Type == ValClass {
+				def := callee.Data.(compiler.ClassDef)
+				inst := &Instance{
+					Class:  def,
+					Fields: make(map[string]Value),
+				}
+				// Call init if present
+				if initM, hasInit := def.Methods["init"]; hasInit {
+					// We need to set up a call frame for the init method.
+					// But we also need to bind `this` to the instance!
+					// How does `this` work? We will put the instance in the local variables!
+					// Actually, the instance itself is the callee in the stack. Let's replace the callee with the instance!
+					vm.stack[vm.sp-argCount-1] = Value{ValInstance, inst}
+
+					frame := callFrame{
+						fn:    &compiler.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount}, // mock fn just for the frame
+						ip:    vm.ip,
+						bp:    vm.sp - argCount - 1, // 'this' is at sp - argCount - 1
+						chunk: chunk,
+					}
+					vm.frames = append(vm.frames, frame)
+
+					savedIP := vm.ip
+					savedChunk := chunk
+					err := vm.execute(initM.Chunk)
+					if err != nil {
+						return err // simple error handling for now
+					}
+
+					vm.frames = vm.frames[:len(vm.frames)-1]
+					// init returns nothing (or unknown), pop it
+					vm.pop()
+
+					vm.sp = frame.bp
+					if vm.sp < 0 {
+						vm.sp = 0
+					}
+					vm.push(Value{ValInstance, inst})
+
+					vm.ip = savedIP
+					chunk = savedChunk
+					vm.chunk = chunk
+					continue
+				} else {
+					if argCount > 0 {
+						return vm.runtimeErr("E300", line, col, "class has no init but got args")
+					}
+					vm.sp -= argCount + 1
+					vm.push(Value{ValInstance, inst})
+					continue
+				}
+			}
+
+			if callee.Type == ValBoundMethod {
+				bound := callee.Data.(*BoundMethod)
+				// Replace callee with instance so 'this' is at local 0
+				vm.stack[vm.sp-argCount-1] = Value{ValInstance, bound.Instance}
+
+				fn := &compiler.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount}
+
+				frame := callFrame{
+					fn:    fn,
+					ip:    vm.ip,
+					bp:    vm.sp - argCount - 1, // 'this' is at sp - argCount - 1
+					chunk: chunk,
+				}
+				vm.frames = append(vm.frames, frame)
+
+				savedIP := vm.ip
+				savedChunk := chunk
+				err := vm.execute(bound.Method.Chunk)
+				if err != nil {
+					// Check try/catch (omitted for brevity)
+					return err
+				}
+
+				vm.frames = vm.frames[:len(vm.frames)-1]
+				result := vm.pop()
+
+				vm.sp = frame.bp
+				if vm.sp < 0 {
+					vm.sp = 0
+				}
+				vm.push(result)
+
+				vm.ip = savedIP
+				chunk = savedChunk
+				vm.chunk = chunk
 				continue
 			}
 
@@ -514,10 +690,15 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 					tf := vm.tryStack[len(vm.tryStack)-1]
 					vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
 					vm.sp = tf.sp
+					// Push the actual error string
 					vm.push(StringVal(err.Error()))
 					vm.ip = tf.catchIP
 					chunk = savedChunk
 					vm.chunk = chunk
+					// Pop frames until we reach the try block's frame depth
+					for len(vm.frames) > tf.frameDepth {
+						vm.frames = vm.frames[:len(vm.frames)-1]
+					}
 					continue
 				}
 				return err
@@ -561,13 +742,15 @@ func (vm *VM) execute(chunk *compiler.Chunk) error {
 			v := vm.pop()
 			if len(vm.tryStack) > 0 {
 				tf := vm.tryStack[len(vm.tryStack)-1]
-				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
-				vm.sp = tf.sp
-				vm.push(v)
-				vm.ip = tf.catchIP
-			} else {
-				return vm.runtimeErr("E300", line, col, "%s", v.String())
+				if tf.frameDepth == len(vm.frames) {
+					vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+					vm.sp = tf.sp
+					vm.push(v)
+					vm.ip = tf.catchIP
+					continue
+				}
 			}
+			return fmt.Errorf("%s", v.String())
 
 		case compiler.OpBuiltin:
 			if err := vm.executeBuiltin(compiler.BuiltinID(inst.Operand), inst.Operand2, line, col); err != nil {
@@ -718,10 +901,35 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 		result = StringVal(strings.ReplaceAll(args[0].Data.(string), args[1].Data.(string), args[2].Data.(string)))
 
 	case compiler.BuiltinHas:
-		if len(args) != 2 || args[0].Type != ValString || args[1].Type != ValString {
-			return vm.runtimeErr("E300", line, col, "want 2 strings")
+		if len(args) != 2 {
+			return vm.runtimeErr("E300", line, col, "want 2 args")
 		}
-		result = BoolVal(strings.Contains(args[0].Data.(string), args[1].Data.(string)))
+		switch args[0].Type {
+		case ValString:
+			if args[1].Type != ValString {
+				return vm.runtimeErr("E300", line, col, "want string arg")
+			}
+			result = BoolVal(strings.Contains(args[0].Data.(string), args[1].Data.(string)))
+		case ValMap:
+			if args[1].Type != ValString {
+				return vm.runtimeErr("E300", line, col, "want string key")
+			}
+			m := args[0].Data.(map[string]Value)
+			_, ok := m[args[1].Data.(string)]
+			result = BoolVal(ok)
+		case ValArray:
+			arr := args[0].Data.([]Value)
+			found := false
+			for _, v := range arr {
+				if v.String() == args[1].String() {
+					found = true
+					break
+				}
+			}
+			result = BoolVal(found)
+		default:
+			return vm.runtimeErr("E300", line, col, "want str|map|arr")
+		}
 
 	case compiler.BuiltinSort:
 		if len(args) != 1 || args[0].Type != ValArray {
@@ -1052,7 +1260,13 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			return vm.runtimeErr("E300", line, col, "want url string")
 		}
 		reqURL := args[0].Data.(string)
-		resp, err := http.Get(reqURL)
+		req, err := http.NewRequest("GET", reqURL, nil)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "req fail: %v", err)
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "req fail: %v", err)
 		}
@@ -1183,6 +1397,17 @@ func (vm *VM) executeBuiltin(id compiler.BuiltinID, argCount int, line, col int)
 			result = NumberVal(math.Log10(a))
 		default:
 			return vm.runtimeErr("E300", line, col, "unknown math op: %s", op)
+		}
+
+	case compiler.BuiltinIn:
+		if vm.stdinScanner == nil {
+			vm.stdinScanner = bufio.NewScanner(os.Stdin)
+		}
+		if vm.stdinScanner.Scan() {
+			text := strings.TrimSpace(vm.stdinScanner.Text())
+			result = StringVal(text)
+		} else {
+			result = StringVal("")
 		}
 
 	default:

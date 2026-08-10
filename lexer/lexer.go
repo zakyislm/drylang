@@ -148,6 +148,7 @@ func (l *Lexer) nextToken() (Token, error) {
 
 	// Dot (now purely for decimal or property access, but here we just emit TOKEN_DOT)
 	if ch == '.' {
+		l.advance()
 		return l.makeToken(TOKEN_DOT, ".", line, col), nil
 	}
 
