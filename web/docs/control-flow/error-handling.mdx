@@ -1,0 +1,15 @@
+# Error Handling
+
+DryLang uses `try` and `err` blocks to handle errors gracefully.
+
+## Try / Err
+The `err` block catches any error from the `try` block. The error message is injected into the specified variable.
+```rust
+try {
+    content = r("fake_file.txt")
+} err e {
+    pt("Caught: " + e)
+}
+
+pt("Program continues safely.")
+```

@@ -1,0 +1,15 @@
+# Scope & Closures
+
+DryLang uses lexical scoping. Functions can capture variables from their surrounding scope.
+```rust
+multiplier = 10
+
+fn makeAdder(x) {
+    rev => (y) {
+        rev (x + y) * multiplier
+    }
+}
+
+addFive = makeAdder(5)
+pt(addFive(2)) // (5 + 2) * 10 = 70
+```

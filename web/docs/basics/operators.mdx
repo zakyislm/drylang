@@ -1,0 +1,43 @@
+# Operators
+
+DryLang supports standard arithmetic, comparison, and logical operators.
+
+## Arithmetic
+```rust
+a = 10 + 5   // 15
+b = 10 - 5   // 5
+c = 10 * 5   // 50
+d = 10 / 5   // 2
+e = 10 % 3   // 1
+```
+
+## Comparison
+```rust
+isEqual = (a == b)
+isNot = (a != b)
+isGreater = (a > b)
+isLess = (a < b)
+isGtEq = (a >= b)
+isLtEq = (a <= b)
+```
+
+## Logical
+```rust
+andOp = (t & f)  // false
+orOp  = (t | f)  // true
+notOp = !t       // false
+```
+
+## Nullish Coalescing (`??`)
+Returns the right-hand side if the left is `unknown`.
+```rust
+userInput = unknown
+name = userInput ?? "Guest"
+pt(name) // "Guest"
+```
+
+## Optional Chaining (`?.`)
+Safely access nested properties without crashing on `unknown`.
+```rust
+result = obj?.field
+```

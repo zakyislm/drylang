@@ -1,0 +1,35 @@
+# Data Types
+
+DryLang supports standard primitive types natively.
+
+## Number
+All numbers (integers and floats) are treated as a unified Number type (`float64` under the hood).
+```rust
+count = 10
+price = 99.99
+```
+
+## String
+Strings are enclosed in double quotes. String interpolation is supported with `${}`.
+```rust
+name = "Zaky"
+greeting = "Hello, ${name}!"
+```
+
+Raw strings use backticks:
+```rust
+raw = `no escapes here \n`
+```
+
+## Boolean
+Use `t` for true and `f` for false.
+```rust
+isActive = t
+isDone = f
+```
+
+## Unknown (Null)
+The `unknown` keyword represents a null/uninitialized value.
+```rust
+data = unknown
+```

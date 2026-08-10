@@ -372,6 +372,14 @@ func (l *Lexer) readOperator() (Token, error) {
 	case '|':
 		return l.makeToken(TOKEN_OR, "|", line, col), nil
 	case '?':
+		if l.pos < len(l.input) && l.peek() == '.' {
+			l.advance()
+			return l.makeToken(TOKEN_QMARK_DOT, "?.", line, col), nil
+		}
+		if l.pos < len(l.input) && l.peek() == '?' {
+			l.advance()
+			return l.makeToken(TOKEN_QQ, "??", line, col), nil
+		}
 		return l.makeToken(TOKEN_QUESTION, "?", line, col), nil
 	case '(':
 		return l.makeToken(TOKEN_LPAREN, "(", line, col), nil
@@ -410,6 +418,10 @@ func (l *Lexer) readOperator() (Token, error) {
 		if l.pos < len(l.input) && l.peek() == '=' {
 			l.advance()
 			return l.makeToken(TOKEN_LT_EQ, "<=", line, col), nil
+		}
+		if l.pos < len(l.input) && l.peek() == '-' {
+			l.advance()
+			return l.makeToken(TOKEN_LARROW, "<-", line, col), nil
 		}
 		return l.makeToken(TOKEN_LT, "<", line, col), nil
 

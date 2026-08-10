@@ -10,20 +10,23 @@ import { CodeBlock } from '@/components/CodeBlock'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'dryLang - Docs',
+  title: 'dryLang - Documentation',
+  description: 'Writeless, get more. The official documentation for dryLang, covering everything from basics to advanced built-ins.',
+  keywords: 'drylang, dry lang, dry language, programming language, docs, documentation, tutorial, guide, writeless get more, minimal programming language, fast execution, custom virtual machine, bytecode, dynamic typing, golang, learn programming, developer experience, max 4 characters, 4-character rule, esolang, next generation language',
+  openGraph: {
+    title: 'dryLang - Documentation',
+    description: 'Writeless, get more. The official documentation for dryLang.',
+    siteName: 'dryLang',
+    type: 'website',
+  }
 }
 
 export default function DocsIndex() {
   const docsDir = path.join(process.cwd(), 'docs')
-  const filePath = path.join(docsDir, `index.md`)
+  const filePath = path.join(docsDir, `index.mdx`)
   
   if (!fs.existsSync(filePath)) {
-    return (
-      <article className="markdown-body">
-        <h1>Welcome to dryLang Documentation</h1>
-        <p>Please select a topic from the sidebar to begin.</p>
-      </article>
-    )
+    notFound()
   }
 
   let content = fs.readFileSync(filePath, 'utf8')
@@ -57,7 +60,7 @@ export default function DocsIndex() {
             // Strip .md from internal links
             let resolvedHref = href;
             if (resolvedHref && !resolvedHref.startsWith('http')) {
-              resolvedHref = resolvedHref.replace(/\.md$/, '');
+              resolvedHref = resolvedHref.replace(/\.mdx?$/, '');
             }
             return <a href={resolvedHref} {...props} />
           },

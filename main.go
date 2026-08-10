@@ -4,6 +4,7 @@ import (
 	"drylang/compiler"
 	"drylang/errfmt"
 	"drylang/lexer"
+	"drylang/ast"
 	"drylang/parser"
 	"drylang/vm"
 	"embed"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"github.com/joho/godotenv"
 )
 
 //go:embed templates/*
@@ -22,8 +24,10 @@ var templateFiles embed.FS
 const Version = "1.0.0"
 
 func main() {
+	// Attempt to load .env file from the current directory, ignoring errors if it doesn't exist.
+	_ = godotenv.Load()
 	if len(os.Args) < 2 {
-		runREPL()
+		fmt.Println("REPL not implemented")
 		os.Exit(0)
 	}
 
@@ -53,16 +57,16 @@ func main() {
 			die(err)
 		}
 		for _, e := range entries {
-			if !e.IsDir() && (strings.HasSuffix(e.Name(), ".y") || strings.HasSuffix(e.Name(), ".dry")) {
+			if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".dry")) {
 				files = append(files, e.Name())
 			}
 		}
 		if len(files) == 0 {
-			fmt.Println("0:0 no .y or .dry files")
+			fmt.Println("0:0 no .dry files")
 			os.Exit(1)
 		}
 	} else if strings.Contains(target, ",") {
-		// Multiple files: y file1.y,file2.y
+		// Multiple files: y file1.dry,file2.y
 		files = strings.Split(target, ",")
 	} else {
 		// Single file or folder or URL
@@ -79,7 +83,7 @@ func main() {
 					die(err)
 				}
 				for _, e := range entries {
-					if !e.IsDir() && (strings.HasSuffix(e.Name(), ".y") || strings.HasSuffix(e.Name(), ".dry")) {
+					if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".dry")) {
 						files = append(files, filepath.Join(target, e.Name()))
 					}
 				}
@@ -90,7 +94,7 @@ func main() {
 	}
 
 	ldr := newLoader()
-	var finalProg parser.Program
+	var finalProg ast.Program
 
 	for _, file := range files {
 		prog, err := ldr.loadAndParse(file, ".")
@@ -116,7 +120,7 @@ func newLoader() *loader {
 	return &loader{visited: make(map[string]bool)}
 }
 
-func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, error) {
+func (l *loader) loadAndParse(target string, baseDir string) (*ast.Program, error) {
 	var fullPath string
 	isURL := false
 
@@ -132,7 +136,7 @@ func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, e
 			if len(parts) > 3 {
 				path = strings.Join(parts[3:], "/")
 			} else {
-				path = "idx.y" // default entrypoint
+				path = "idx.dry" // default entrypoint
 			}
 			target = fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/main/%s", user, repo, path)
 		}
@@ -155,7 +159,7 @@ func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, e
 	}
 
 	if l.visited[fullPath] {
-		return &parser.Program{}, nil // Skip already loaded to prevent cycles
+		return &ast.Program{}, nil // Skip already loaded to prevent cycles
 	}
 	l.visited[fullPath] = true
 
@@ -191,7 +195,7 @@ func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, e
 		return nil, err
 	}
 
-	var mergedStmts []parser.Stmt
+	var mergedStmts []ast.Stmt
 	newBaseDir := baseDir
 	if isURL {
 		u, _ := url.Parse(fullPath)
@@ -205,7 +209,7 @@ func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, e
 	}
 
 	for _, stmt := range prog.Stmts {
-		if useStmt, ok := stmt.(*parser.UseStmt); ok {
+		if useStmt, ok := stmt.(*ast.UseStmt); ok {
 			subProg, err := l.loadAndParse(useStmt.Path, newBaseDir)
 			if err != nil {
 				return nil, err
@@ -220,11 +224,15 @@ func (l *loader) loadAndParse(target string, baseDir string) (*parser.Program, e
 	return prog, nil
 }
 
-func runAST(prog *parser.Program) error {
+func runAST(prog *ast.Program) error {
 	comp := compiler.New()
 	chunk, fns, err := comp.Compile(prog)
 	if err != nil {
 		return err
+	}
+	
+	for i, inst := range chunk.Code {
+		fmt.Printf("%04d %v %v\n", i, inst.Op, inst.Operand)
 	}
 
 	machine := vm.New(chunk, fns)
@@ -255,6 +263,10 @@ func run(source string) error {
 	if err != nil {
 		return err
 	}
+	
+	for i, inst := range chunk.Code {
+		fmt.Printf("%04d %v %v\n", i, inst.Op, inst.Operand)
+	}
 
 	machine := vm.New(chunk, fns)
 	if err := machine.Run(); err != nil {
@@ -279,14 +291,14 @@ Usage:
 Commands:
   init        Scaffold a new project in the specified directory.
               Templates: api, web, crud, fetch, cli, automation, scraper, hello.
-              (If no template is specified, creates an empty idx.y)
+              (If no template is specified, creates an empty idx.dry)
 
 Options:
   -h, --help     Show this help message.
   -v, --version  Show version information.
 
 Examples:
-  dry main.y                   # Run a local file
+  dry main.dry                   # Run a local file
   dry .                        # Run all files in current directory
   dry github.com/user/repo     # Run from a GitHub repo
   dry init . api               # Create a REST API project in current dir
@@ -306,7 +318,7 @@ func handleInit() {
 		}
 	}
 
-	targetFile := filepath.Join(targetDir, "idx.y")
+	targetFile := filepath.Join(targetDir, "idx.dry")
 	if _, err := os.Stat(targetFile); err == nil {
 		fmt.Printf("Error: %s already exists\n", targetFile)
 		os.Exit(1)
@@ -318,19 +330,19 @@ func handleInit() {
 	}
 
 	templateMap := map[string]string{
-		"api":        "rest-api.y",
-		"web":        "file-server.y",
-		"crud":       "crud.y",
-		"fetch":      "fetch-json.y",
-		"cli":        "cli-tool.y",
-		"automation": "automation.y",
-		"scraper":    "scraper.y",
-		"hello":      "hello.y",
+		"api":        "rest-api.dry",
+		"web":        "file-server.dry",
+		"crud":       "crud.dry",
+		"fetch":      "fetch-json.dry",
+		"cli":        "cli-tool.dry",
+		"automation": "automation.dry",
+		"scraper":    "scraper.dry",
+		"hello":      "hello.dry",
 	}
 
 	var content []byte
 	if templateName == "" {
-		content = []byte("// idx.y - Entry point\npt \"Hello, dryLang!\"\n")
+		content = []byte("// idx.dry - Entry point\npt \"Hello, dryLang!\"\n")
 	} else {
 		fileName, ok := templateMap[templateName]
 		if !ok {

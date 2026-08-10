@@ -33,7 +33,7 @@ DOWNLOAD_URL=$(curl -s $API_URL | grep "browser_download_url" | grep "$ASSET_NAM
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo -e "\033[1;33mWarning: Could not find pre-compiled binary for ${OS}-${ARCH} in the latest release.\033[0m"
-    echo -e "You may need to build from source: \033[1;32mgo build -o y .\033[0m"
+    echo -e "You may need to build from source: \033[1;32mgo build -o dry .\033[0m"
     exit 1
 fi
 
@@ -61,4 +61,4 @@ fi
 
 echo -e "\n\033[1;32mInstallation Complete!\033[0m"
 echo "dryLang is installed at: $INSTALL_DIR/$BIN_NAME (and aliased to 'y')"
-echo "Type 'y --version' to verify."
+echo "Type 'dry --version' to verify."

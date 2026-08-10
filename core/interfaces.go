@@ -10,7 +10,13 @@ import (
 type ParserCore interface {
 	ParseStatement() (ast.Stmt, error)
 	ParseExpression(precedence int) (ast.Expr, error)
-	ParseBlock() (*ast.BlockStmt, error)
+	ParsePrefix() (ast.Expr, error)
+	ParseInfix(left ast.Expr) (ast.Expr, error)
+	PeekPrecedence() int
+	CurrentPrecedence() int
+	ParseBlock() ([]ast.Stmt, error)
+	ParseParamList() ([]string, error)
+	SkipSemicolons()
 	Advance() lexer.Token
 	Expect(typ lexer.TokenType) (lexer.Token, error)
 	Peek() lexer.Token
@@ -20,15 +26,49 @@ type ParserCore interface {
 
 // CompilerCore defines the interface for the main compiler.
 type CompilerCore interface {
-	Emit(op byte, operand int, line int, col int)
+	Emit(op Opcode, operand int, line int, col int) int
+	Emit2(op Opcode, operand, operand2 int, line int, col int) int
+	AddConst(val interface{}) int
+	AddLocal(name string) int
+	ResolveLocal(name string) int
+	SetGlobal(name string)
+	IsGlobal(name string) bool
+	BeginScope()
+	EndScope()
+	GetDepth() int
 	CompileExpr(expr ast.Expr) error
 	CompileStmt(stmt ast.Stmt) error
-	// TODO: Add other necessary compiler methods
+
+	// Loop management
+	PushLoopCtx(start int)
+	PopLoopCtx()
+	AddBreak(jump int)
+	GetLoopStart() int
+
+	// Function management
+	AddFunc(fn *CompiledFn)
+
+	// Error handling
+	Errorf(code string, line, col int, format string, args ...interface{}) error
 }
 
 // VMCore defines the interface for the Virtual Machine.
 type VMCore interface {
-	Push(val interface{}) // Use interface{} or generic Value type for now
-	Pop() interface{}
-	// TODO: Add other VM methods
+	Push(val Value)
+	Pop() Value
+	Peek() Value
+	SetGlobal(name string, val Value)
+	GetGlobal(name string) (Value, bool)
+	SetLocal(slot int, val Value)
+	GetLocal(slot int) Value
+	CallFunction(fn *CompiledFn, argCount int) error
+	Try(catchIP int) error
+	EndTry() error
+	Throw() error
+	GetIP() int
+	SetIP(ip int)
+	GetChunk() *Chunk
+	PushFrame(fn *CompiledFn, argCount int) error
+	PopFrame()
+	Errorf(format string, args ...interface{}) error
 }

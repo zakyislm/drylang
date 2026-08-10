@@ -1,0 +1,4 @@
+// Ask for name
+name = in("What is your name? ")
+// Print it
+pt("Hello, ${name}!")

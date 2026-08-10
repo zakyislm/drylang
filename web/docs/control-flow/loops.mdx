@@ -1,0 +1,40 @@
+# Loops
+
+DryLang uses the `lp` keyword for all looping.
+
+## Fixed Count Loop
+Loop a specific number of times:
+```rust
+lp 5 {
+    pt("hello")
+}
+```
+
+## Conditional Loop
+Loop while a condition is true:
+```rust
+count = 0
+lp count < 3 {
+    pt(count)
+    count = count + 1
+}
+```
+
+## Infinite Loop
+Omit the expression for an infinite loop:
+```rust
+lp {
+    pt("forever")
+}
+```
+
+## Done and Con
+Use `done` to break out of a loop, and `con` to skip to the next iteration.
+```rust
+lp 10 {
+    if i == 5 {
+        done
+    }
+    pt(i)
+}
+```

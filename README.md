@@ -1,120 +1,95 @@
-# dryLang
+<div align="center">
 
-> **Writeless, get more**
+<img src="icon/1.svg" alt="dryLang Logo" width="120" />
 
-dryLang is a minimalist, dynamically-typed programming language compiled to bytecode and executed on a fast, stack-based virtual machine.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](#)
+[![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8.svg?logo=go)](#)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](#)
 
-## Why dryLang? (Origin Story)
+*Writeless, get more. Say exactly what you mean. Max 4 characters.*
 
-I used to write long, verbose messages. I once wrote **20 paragraphs** just to apologize to someone. It was exhausting, repetitive, and — looking back — it didn't actually convey my emotions better. It just added noise.
+</div>
 
-Then I realized: **text is just text**. It doesn't change the reality beneath it. Adding more words doesn't make you more sincere. It just wastes time.
+---
 
-I started texting differently — shorter, more direct. "sry" instead of a paragraph. "y?" instead of "why are you doing this??". No fluff. Just signal, no noise.
+<div align="center">
+  
+**dryLang** is a dynamically-typed bytecode virtual machine born out of a very specific, slightly embarrassing personal realization.
 
-Around the same time, I got frustrated with programming languages. They all felt bloated — you need a `package.json`, a virtual environment, an npm ecosystem, just to write a simple HTTP server or script. It felt like writing 20 paragraphs when you only need one sentence.
+<br/>
+<br/>
 
-**So I built dryLang:** A language where you say exactly what you mean, nothing more.
+<img src="icon/syntax.svg" alt="dryLang Syntax" width="700" />
 
-- No boilerplate ceremony
-- No dependency management theater
-- No keywords longer than 4 characters
-- Everything compressed to its essence
+</div>
 
-**Inspirations:**
-- **Go**: Single binary output, fast compilation, `net/http` simplicity.
-- **Python**: Clean variable naming, dynamic typing.
+<br/>
+
+## Behind
+
+In my past, I wrote a 20-paragraph text message just to apologize to my ex. Looking back, I realized something important: text is just virtual. It lacks real-life emotional reaction, and spending 20 paragraphs just to say "I'm sorry" was incredibly verbose and pointless. 
+
+It made me think: *Why do we beat around the bush so much?* 
+
+Inspired by that moment—and heavily influenced by legendary local parody projects like [Jaksel Script](https://github.com/willysel/jaksel-language), [Prabogo](https://github.com/conquera99/prabogo), [gib.run](https://gib.run/), and [Naskah Script](https://github.com/khalidomard/naskahscript)—I decided to create a programming language that strictly forbids you from being verbose. 
+
+In **dryLang**, no syntax or keyword exceeds 4 characters. You say exactly what you mean, and nothing more. It's truly a Frankenstein of the languages I've touched before, combining their best concepts into a single, stripped-down experience:
+
+- **Java**: Inheritance and modular file structures.
 - **JavaScript**: String interpolation (`${}`).
+- **Python**: Clean variable declarations, `print` (`pt`), and `input` (`in`).
+- **Go**: Strict rules (unused variables will stop compilation).
+- **Go & C++**: Struct foundations.
 
-But distilled. Stripped of everything unnecessary.
+## Quick Examples
 
-The result is a language compressed to its absolute essence: **No keyword or built-in function exceeds 4 characters.**
+**1. Basic I/O & Interpolation**
+```rust
+name = in("What is your name? ")
+pt("Hello, ${name}!")
+```
 
-## Proof of Concept: The 4-Character Limit
-dryLang enforces a strict limit on all built-in syntax to save keystrokes.
+**2. Structs**
+```rust
+User {
+    name
+    age
+}
+```
 
-| Category | Keywords / Functions |
-|----------|----------------------|
-| **Core** | `cns`, `t`, `f`, `fn`, `rev`, `if`, `el`, `elif`, `on`, `lp`, `done`, `con`, `try`, `err`, `pv`, `use` |
-| **I/O & Sys** | `pt`, `in`, `r`, `w`, `dir`, `del`, `arg`, `env`, `cmd`, `die`, `q`, `now`, `date` |
-| **Data** | `num`, `str`, `get`, `len`, `add`, `rm`, `pop`, `sort`, `key`, `val`, `json` |
-| **String** | `cap`, `low`, `trm`, `spl`, `j`, `mod`, `has` |
-| **Math** | `abs`, `min`, `max`, `rnd`, `ran`, `math` |
-| **Net & DB** | `req`, `op`, `db` |
-
-## Size & Performance
-- **Tiny Toolchain**: The entire compiler, VM, and runtime is a single ~5MB binary. Compare this to Node.js (~50MB) or Python (~30MB).
-- **Fast Execution**: Code compiles to bytecode instantly and runs on a highly optimized stack-based VM written in Go.
-- **Zero Dependencies**: HTTP servers, SQLite/PostgreSQL drivers, JSON parsing, and advanced math are all baked into the single binary.
-
-### Pros & Cons
-**Pros (+):**
-- Instantly start a web server or database connection with 1 line of code.
-- No `package.json`, no `pip install`, no `go mod init`.
-- Incredibly small syntax footprint.
-- Great for quick scripts, automations, and simple APIs.
-
-**Cons (-):**
-- Small ecosystem (no external package manager yet).
-- Strict (unused variables will stop compilation).
-- Single-letter keywords require a slight learning curve.
-
-## Real-World Examples
-
-### 1. HTTP Server in 5 Lines
+**3. HTTP Server**
+A fully functional HTTP server in just 4 lines:
 ```rust
 fn handler(req) {
-    rev { "status": 200, "body": "{\"hello\": \"world\"}" }
+    rev "hello, world!"
 }
 op(8080, handler, "mul", 100)
 ```
 
-### 2. SQLite Database
-```rust
-db("sqlite", "app.db", "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
-db("sqlite", "app.db", "INSERT INTO users (name) VALUES (?)", "Zaky")
-users = db("sqlite", "app.db", "SELECT * FROM users")
-pt users
-```
+## Installing
 
-### 3. Fetch JSON API
-```rust
-body req("https://api.github.com/users/octocat")
-data json(body)
-pt "Followers: " + str(data["followers"])
-```
+dryLang is a single binary with zero external dependencies.
 
-## Installation
-
+**From source:**
 ```bash
 git clone https://github.com/zakyislm/drylang.git
 cd drylang
 go build -o dry .
 ```
 
-(You can alias the executable to `y`, `dry`, or `drylang`).
+## Disclaimer
 
-## Running Scripts
+This is purely a project made for fun and for learning how to build a compiler/interpreter. 
 
-dryLang supports `.y` and `.dry` file extensions.
-
-```bash
-# Single file
-dry main.y
-
-# Multiple files (concatenated in order)
-dry file1.y,file2.y
-
-# Entire directory
-dry myfolder
-```
+It is absolutely not meant for production. If you use this to build your company's banking system, you are on your own. But if you want to play around with a strict, minimalist language just for the vibes, you're in the right place.
 
 ## Documentation
+Visit [Docs here](https://drylang.jeki.me/docs) to view the full documentation.
 
-- Full Documentation (docs/) — comprehensive language reference
-- DryDocs (drydocs/) — ultra-concise reference (dryLang style)
-- Changelog (CHANGELOG.md) — release history
-- Contributing (CONTRIBUTING.md) — how to help out
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for more details.
 
 ## License
-MIT
+
+dryLang is released under the [MIT License](LICENSE).

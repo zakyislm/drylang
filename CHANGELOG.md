@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - System builtins: `now()`, `date()`, `arg()`, `env()`, `cmd()`, `dir()`, `del()`, `die()`.
 - Networking & JSON builtins: `req()`, `json()`.
 - Support for both `.y` and `.dry` file extensions.
-- Comprehensive documentation overhaul (`docs/` and `drydocs/`).
+- Comprehensive documentation overhaul (`docs/`).
 - Standardized open-source files (`LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`).
 - GitHub Actions CI/CD workflows for testing and release binaries.
 

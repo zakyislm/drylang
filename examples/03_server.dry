@@ -1,0 +1,5 @@
+// 4-line HTTP server
+fn handler(req) {
+    rev "hello, world!"
+}
+op(8080, handler, "mul", 100)

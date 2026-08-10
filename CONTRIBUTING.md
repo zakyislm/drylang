@@ -9,9 +9,9 @@ Before contributing, please understand the core philosophy: **Writeless, get mor
 3. **No External Dependencies in Scripts**: If a feature requires a complex 3rd party package, it should probably be built-in using Go standard library or high-quality Go modules inside the VM.
 
 ## Setting Up the Development Environment
-1. Clone the repository: `git clone https://github.com/user/drylang.git`
-2. Ensure you have Go 1.21+ installed.
-3. Run tests (if applicable) or build: `go build -o y.exe .`
+1. Clone the repository: `git clone https://github.com/zakyislm/drylang.git`
+2. Ensure you have Go 1.22+ installed.
+3. Run tests (if applicable) or build: `go build -o dry .`
 
 ## How to Contribute
 
@@ -22,10 +22,10 @@ Please open an issue providing:
 - The operating system and version.
 
 ### 2. Adding a New Built-in Function
-1. Add the constant to `BuiltinNames` in `compiler/compiler.go` (ensure it's ≤ 4 chars).
+1. Add the constant to `BuiltinNames` in `core/types.go` (ensure it's ≤ 4 chars).
 2. Implement the logic in the `executeBuiltin` switch statement inside `vm/vm.go`.
 3. Add tests for the new function in the `tests/` directory.
-4. Document the function in `docs/builtins.md` and `drydocs/builtins.md`.
+4. Document the function in `docs/builtins.md`.
 
 ### 3. Submitting Pull Requests
 - Keep PRs focused on a single feature or bug fix.
