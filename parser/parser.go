@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"drylang/ast"
 	"drylang/errfmt"
 	"drylang/lexer"
 	"fmt"
@@ -22,22 +23,22 @@ const (
 )
 
 var precedences = map[lexer.TokenType]int{
-	lexer.TOKEN_OR:      PREC_OR,
-	lexer.TOKEN_AND:     PREC_AND,
-	lexer.TOKEN_ASSIGN:  PREC_EQUALITY,
-	lexer.TOKEN_NOT_EQ:  PREC_EQUALITY,
-	lexer.TOKEN_LT:      PREC_COMPARISON,
-	lexer.TOKEN_GT:      PREC_COMPARISON,
-	lexer.TOKEN_LT_EQ:   PREC_COMPARISON,
-	lexer.TOKEN_GT_EQ:   PREC_COMPARISON,
-	lexer.TOKEN_PLUS:    PREC_SUM,
-	lexer.TOKEN_MINUS:   PREC_SUM,
-	lexer.TOKEN_STAR:    PREC_PRODUCT,
-	lexer.TOKEN_SLASH:   PREC_PRODUCT,
-	lexer.TOKEN_PERCENT: PREC_PRODUCT,
-	lexer.TOKEN_LPAREN:  PREC_CALL,
+	lexer.TOKEN_OR:       PREC_OR,
+	lexer.TOKEN_AND:      PREC_AND,
+	lexer.TOKEN_ASSIGN:   PREC_EQUALITY,
+	lexer.TOKEN_NOT_EQ:   PREC_EQUALITY,
+	lexer.TOKEN_LT:       PREC_COMPARISON,
+	lexer.TOKEN_GT:       PREC_COMPARISON,
+	lexer.TOKEN_LT_EQ:    PREC_COMPARISON,
+	lexer.TOKEN_GT_EQ:    PREC_COMPARISON,
+	lexer.TOKEN_PLUS:     PREC_SUM,
+	lexer.TOKEN_MINUS:    PREC_SUM,
+	lexer.TOKEN_STAR:     PREC_PRODUCT,
+	lexer.TOKEN_SLASH:    PREC_PRODUCT,
+	lexer.TOKEN_PERCENT:  PREC_PRODUCT,
+	lexer.TOKEN_LPAREN:   PREC_CALL,
 	lexer.TOKEN_LBRACKET: PREC_CALL,
-	lexer.TOKEN_DOT:     PREC_CALL,
+	lexer.TOKEN_DOT:      PREC_CALL,
 }
 
 // Parser parses dryLang tokens into an AST.
@@ -116,8 +117,8 @@ func (p *Parser) peekPrecedence() int {
 }
 
 // Parse parses the token stream into a Program AST.
-func (p *Parser) Parse() (*Program, error) {
-	program := &Program{}
+func (p *Parser) Parse() (*ast.Program, error) {
+	program := &ast.Program{}
 	p.skipSemicolons()
 
 	for p.current.Type != lexer.TOKEN_EOF {
@@ -134,7 +135,7 @@ func (p *Parser) Parse() (*Program, error) {
 	return program, nil
 }
 
-func (p *Parser) parseStatement() (Stmt, error) {
+func (p *Parser) parseStatement() (ast.Stmt, error) {
 	switch p.current.Type {
 	case lexer.TOKEN_CNS:
 		return p.parseConstDecl()
@@ -152,10 +153,10 @@ func (p *Parser) parseStatement() (Stmt, error) {
 		return p.parseLoop()
 	case lexer.TOKEN_DONE:
 		tok := p.advance()
-		return &DoneStmt{Line: tok.Line, Col: tok.Col}, nil
+		return &ast.DoneStmt{Line: tok.Line, Col: tok.Col}, nil
 	case lexer.TOKEN_CON:
 		tok := p.advance()
-		return &ConStmt{Line: tok.Line, Col: tok.Col}, nil
+		return &ast.ConStmt{Line: tok.Line, Col: tok.Col}, nil
 	case lexer.TOKEN_TRY:
 		return p.parseTry()
 	case lexer.TOKEN_ERR:
@@ -164,6 +165,8 @@ func (p *Parser) parseStatement() (Stmt, error) {
 		return p.parseUse()
 	case lexer.TOKEN_PV:
 		return p.parsePrivate()
+	case lexer.TOKEN_CL:
+		return p.parseClass()
 	case lexer.TOKEN_PT:
 		return p.parsePrint()
 	case lexer.TOKEN_QUESTION:
@@ -173,7 +176,7 @@ func (p *Parser) parseStatement() (Stmt, error) {
 	}
 }
 
-func (p *Parser) parseConstDecl() (Stmt, error) {
+func (p *Parser) parseConstDecl() (ast.Stmt, error) {
 	tok := p.advance() // consume cns
 	name, err := p.expect(lexer.TOKEN_IDENT)
 	if err != nil {
@@ -190,10 +193,10 @@ func (p *Parser) parseConstDecl() (Stmt, error) {
 		return nil, err
 	}
 
-	return &ConstDeclStmt{Name: name.Literal, Value: val, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.ConstDeclStmt{Name: name.Literal, Value: val, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseFnDecl(isAsync bool) (Stmt, error) {
+func (p *Parser) parseFnDecl(isAsync bool) (ast.Stmt, error) {
 	tok := p.advance() // consume fn
 	name, err := p.expect(lexer.TOKEN_IDENT)
 	if err != nil {
@@ -216,7 +219,7 @@ func (p *Parser) parseFnDecl(isAsync bool) (Stmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseAsyncFnDecl() (Stmt, error) {
+func (p *Parser) parseAsyncFnDecl() (ast.Stmt, error) {
 	p.advance() // consume asn
 	if p.current.Type != lexer.TOKEN_FN {
 		return nil, p.errorf("E105", "needs fn")
@@ -224,9 +227,9 @@ func (p *Parser) parseAsyncFnDecl() (Stmt, error) {
 	return p.parseFnDecl(true)
 }
 
-func (p *Parser) parseReturn() (Stmt, error) {
+func (p *Parser) parseReturn() (ast.Stmt, error) {
 	tok := p.advance() // consume rev
-	var val Expr
+	var val ast.Expr
 
 	// rev can be without value (returns unknown)
 	if p.current.Type != lexer.TOKEN_SEMICOLON && p.current.Type != lexer.TOKEN_RBRACE && p.current.Type != lexer.TOKEN_EOF {
@@ -237,10 +240,10 @@ func (p *Parser) parseReturn() (Stmt, error) {
 		}
 	}
 
-	return &ReturnStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.ReturnStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseIf() (Stmt, error) {
+func (p *Parser) parseIf() (ast.Stmt, error) {
 	tok := p.advance() // consume if
 	cond, err := p.parseExpression(PREC_LOWEST)
 	if err != nil {
@@ -252,7 +255,7 @@ func (p *Parser) parseIf() (Stmt, error) {
 		return nil, err
 	}
 
-	stmt := &IfStmt{Condition: cond, Body: body, Line: tok.Line, Col: tok.Col}
+	stmt := &ast.IfStmt{Condition: cond, Body: body, Line: tok.Line, Col: tok.Col}
 
 	p.skipSemicolons()
 
@@ -284,7 +287,7 @@ func (p *Parser) parseIf() (Stmt, error) {
 	return stmt, nil
 }
 
-func (p *Parser) parseOn() (Stmt, error) {
+func (p *Parser) parseOn() (ast.Stmt, error) {
 	tok := p.advance() // consume on
 
 	if _, err := p.expect(lexer.TOKEN_LPAREN); err != nil {
@@ -325,7 +328,7 @@ func (p *Parser) parseOn() (Stmt, error) {
 	return stmt, nil
 }
 
-func (p *Parser) parseLoop() (Stmt, error) {
+func (p *Parser) parseLoop() (ast.Stmt, error) {
 	tok := p.advance() // consume lp
 	var limit Expr
 
@@ -343,10 +346,10 @@ func (p *Parser) parseLoop() (Stmt, error) {
 		return nil, err
 	}
 
-	return &LoopStmt{Limit: limit, Body: body, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.LoopStmt{Limit: limit, Body: body, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseTry() (Stmt, error) {
+func (p *Parser) parseTry() (ast.Stmt, error) {
 	tok := p.advance() // consume try
 	body, err := p.parseBlock()
 	if err != nil {
@@ -376,46 +379,28 @@ func (p *Parser) parseTry() (Stmt, error) {
 		return nil, err
 	}
 
-	return &TryStmt{Body: body, ErrName: errName.Literal, Catch: catchBody, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.TryStmt{Body: body, ErrName: errName.Literal, Catch: catchBody, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseThrow() (Stmt, error) {
+func (p *Parser) parseThrow() (ast.Stmt, error) {
 	tok := p.advance() // consume err
 	val, err := p.parseExpression(PREC_LOWEST)
 	if err != nil {
 		return nil, err
 	}
-	return &ThrowStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.ThrowStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseUse() (Stmt, error) {
-	tok := p.advance() // consume use
-	path, err := p.expect(lexer.TOKEN_STRING)
-	if err != nil {
-		return nil, err
-	}
-	return &UseStmt{Path: path.Literal, Line: tok.Line, Col: tok.Col}, nil
-}
-
-func (p *Parser) parsePrivate() (Stmt, error) {
-	tok := p.advance() // consume pv
-	inner, err := p.parseStatement()
-	if err != nil {
-		return nil, err
-	}
-	return &PrivateStmt{Inner: inner, Line: tok.Line, Col: tok.Col}, nil
-}
-
-func (p *Parser) parsePrint() (Stmt, error) {
+func (p *Parser) parsePrint() (ast.Stmt, error) {
 	tok := p.advance() // consume pt
 	val, err := p.parseExpression(PREC_LOWEST)
 	if err != nil {
 		return nil, err
 	}
-	return &PrintStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.PrintStmt{Value: val, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseUnknownBool() (Stmt, error) {
+func (p *Parser) parseUnknownBool() (ast.Stmt, error) {
 	tok := p.advance() // consume ?
 	name, err := p.expect(lexer.TOKEN_IDENT)
 	if err != nil {
@@ -430,7 +415,7 @@ func (p *Parser) parseUnknownBool() (Stmt, error) {
 // - identifier { fields } (struct declaration — fields are bare idents)
 // - varname structname { field val ... } (struct instance)
 // - expression statement (function call, etc.)
-func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
+func (p *Parser) parseExpressionOrAssign() (ast.Stmt, error) {
 	// Check for struct declaration: ident { bareIdent bareIdent ... }
 	if p.current.Type == lexer.TOKEN_IDENT && p.peek().Type == lexer.TOKEN_LBRACE {
 		if p.isStructDecl() {
@@ -443,10 +428,10 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 		if p.peek().Type != lexer.TOKEN_SEMICOLON && p.peek().Type != lexer.TOKEN_EOF &&
 			p.peek().Type != lexer.TOKEN_RBRACE && p.peek().Type != lexer.TOKEN_ASSIGN &&
 			p.peekPrecedence() == PREC_LOWEST {
-			
+
 			// We might be looking at `ident expr`
 			// Wait, let's just let it fall through to the expression parser,
-			// and if it's an Ident, we can check for space-separated assignment afterwards.
+			// and if it's an ast.Ident, we can check for space-separated assignment afterwards.
 		}
 	}
 
@@ -460,12 +445,12 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 	// But in a statement context, it's an assignment!
 	if binExpr, ok := expr.(*BinaryExpr); ok && binExpr.Op == lexer.TOKEN_ASSIGN {
 		switch target := binExpr.Left.(type) {
-		case *Ident:
+		case *ast.Ident:
 			if isAllUpper(target.Name) {
-				return &ConstDeclStmt{Name: target.Name, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
+				return &ast.ConstDeclStmt{Name: target.Name, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
 			}
 			return &AssignStmt{Name: target.Name, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
-		case *IndexExpr:
+		case *ast.IndexExpr:
 			return &IndexAssignStmt{Object: target.Object, Index: target.Index, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
 		case *DotExpr:
 			return &DotAssignStmt{Object: target.Object, Field: target.Field, Value: binExpr.Right, Line: target.Line, Col: target.Col}, nil
@@ -473,7 +458,12 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 	}
 
 	// 2. Check for space-separated assignment (ident expr)
-	if ident, isIdent := expr.(*Ident); isIdent {
+	if ident, isIdent := expr.(*ast.Ident); isIdent {
+		// Check for struct init: ident {
+		if p.current.Type == lexer.TOKEN_IDENT && p.peek().Type == lexer.TOKEN_LBRACE {
+			return p.parseStructInit(ident.Name)
+		}
+
 		// Only if next token starts an expression (not end of statement)
 		if p.current.Type != lexer.TOKEN_SEMICOLON && p.current.Type != lexer.TOKEN_EOF &&
 			p.current.Type != lexer.TOKEN_RBRACE && p.isExprStart() {
@@ -482,7 +472,7 @@ func (p *Parser) parseExpressionOrAssign() (Stmt, error) {
 				return nil, err
 			}
 			if isAllUpper(ident.Name) {
-				return &ConstDeclStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
+				return &ast.ConstDeclStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
 			}
 			return &AssignStmt{Name: ident.Name, Value: val, Line: ident.Line, Col: ident.Col}, nil
 		}
@@ -531,7 +521,7 @@ func (p *Parser) isStructDecl() bool {
 	return true
 }
 
-func (p *Parser) parseStructDecl() (Stmt, error) {
+func (p *Parser) parseStructDecl() (ast.Stmt, error) {
 	name := p.advance() // struct name
 	p.advance()         // consume {
 	p.skipSemicolons()
@@ -550,16 +540,16 @@ func (p *Parser) parseStructDecl() (Stmt, error) {
 		return nil, err
 	}
 
-	return &StructDeclStmt{Name: name.Literal, Fields: fields, Line: name.Line, Col: name.Col}, nil
+	return &ast.StructDeclStmt{Name: name.Literal, Fields: fields, Line: name.Line, Col: name.Col}, nil
 }
 
-func (p *Parser) parseStructInit(varName string) (Stmt, error) {
+func (p *Parser) parseStructInit(varName string) (ast.Stmt, error) {
 	line, col := p.current.Line, p.current.Col
 	typeName := p.advance() // struct type name
 	p.advance()             // consume {
 	p.skipSemicolons()
 
-	fields := make(map[string]Expr)
+	fields := make(map[string]ast.Expr)
 	for p.current.Type != lexer.TOKEN_RBRACE && p.current.Type != lexer.TOKEN_EOF {
 		fieldName, err := p.expect(lexer.TOKEN_IDENT)
 		if err != nil {
@@ -577,12 +567,12 @@ func (p *Parser) parseStructInit(varName string) (Stmt, error) {
 		return nil, err
 	}
 
-	initExpr := &StructInitExpr{TypeName: typeName.Literal, Fields: fields, Line: line, Col: col}
+	initExpr := &ast.StructInitExpr{TypeName: typeName.Literal, Fields: fields, Line: line, Col: col}
 	return &AssignStmt{Name: varName, Value: initExpr, Line: line, Col: col}, nil
 }
 
 // parseExpression is the core Pratt parser.
-func (p *Parser) parseExpression(prec int) (Expr, error) {
+func (p *Parser) parseExpression(prec int) (ast.Expr, error) {
 	left, err := p.parsePrefix()
 	if err != nil {
 		return nil, err
@@ -598,38 +588,38 @@ func (p *Parser) parseExpression(prec int) (Expr, error) {
 	return left, nil
 }
 
-func (p *Parser) parsePrefix() (Expr, error) {
+func (p *Parser) parsePrefix() (ast.Expr, error) {
 	switch p.current.Type {
 	case lexer.TOKEN_NUMBER:
 		tok := p.advance()
-		return &NumberLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.NumberLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_STRING:
 		tok := p.advance()
-		return &StringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.StringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_RAW_STRING:
 		tok := p.advance()
-		return &RawStringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.RawStringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_STRING_PART:
 		return p.parseStringInterp()
 
 	case lexer.TOKEN_TRUE:
 		tok := p.advance()
-		return &BoolLit{Value: true, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.BoolLit{Value: true, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_FALSE:
 		tok := p.advance()
-		return &BoolLit{Value: false, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.BoolLit{Value: false, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_UNKNOWN:
 		tok := p.advance()
-		return &UnknownLit{Line: tok.Line, Col: tok.Col}, nil
+		return &ast.UnknownLit{Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_IDENT:
 		tok := p.advance()
-		return &Ident{Name: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.Ident{Name: tok.Literal, Line: tok.Line, Col: tok.Col}, nil
 
 	case lexer.TOKEN_LPAREN:
 		p.advance()
@@ -676,14 +666,14 @@ func (p *Parser) parsePrefix() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &AwaitExpr{Value: val, Line: tok.Line, Col: tok.Col}, nil
+		return &ast.AwaitExpr{Value: val, Line: tok.Line, Col: tok.Col}, nil
 
 	default:
 		return nil, p.errorf("E109", "illegal %s", p.current.Literal)
 	}
 }
 
-func (p *Parser) parseInfix(left Expr) (Expr, error) {
+func (p *Parser) parseInfix(left ast.Expr) (ast.Expr, error) {
 	switch p.current.Type {
 	case lexer.TOKEN_PLUS, lexer.TOKEN_MINUS, lexer.TOKEN_STAR, lexer.TOKEN_SLASH,
 		lexer.TOKEN_PERCENT, lexer.TOKEN_LT, lexer.TOKEN_GT, lexer.TOKEN_LT_EQ,
@@ -711,9 +701,9 @@ func (p *Parser) parseInfix(left Expr) (Expr, error) {
 	}
 }
 
-func (p *Parser) parseCallExpr(callee Expr) (Expr, error) {
+func (p *Parser) parseCallExpr(callee ast.Expr) (ast.Expr, error) {
 	tok := p.advance() // consume (
-	var args []Expr
+	var args []ast.Expr
 
 	if p.current.Type != lexer.TOKEN_RPAREN {
 		arg, err := p.parseExpression(PREC_LOWEST)
@@ -736,10 +726,10 @@ func (p *Parser) parseCallExpr(callee Expr) (Expr, error) {
 		return nil, err
 	}
 
-	return &CallExpr{Callee: callee, Args: args, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.CallExpr{Callee: callee, Args: args, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseIndexExpr(obj Expr) (Expr, error) {
+func (p *Parser) parseIndexExpr(obj ast.Expr) (ast.Expr, error) {
 	tok := p.advance() // consume [
 	idx, err := p.parseExpression(PREC_LOWEST)
 	if err != nil {
@@ -748,10 +738,10 @@ func (p *Parser) parseIndexExpr(obj Expr) (Expr, error) {
 	if _, err := p.expect(lexer.TOKEN_RBRACKET); err != nil {
 		return nil, err
 	}
-	return &IndexExpr{Object: obj, Index: idx, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.IndexExpr{Object: obj, Index: idx, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseDotExpr(obj Expr) (Expr, error) {
+func (p *Parser) parseDotExpr(obj ast.Expr) (ast.Expr, error) {
 	p.advance() // consume .
 	field, err := p.expect(lexer.TOKEN_IDENT)
 	if err != nil {
@@ -760,9 +750,9 @@ func (p *Parser) parseDotExpr(obj Expr) (Expr, error) {
 	return &DotExpr{Object: obj, Field: field.Literal, Line: field.Line, Col: field.Col}, nil
 }
 
-func (p *Parser) parseArrayLit() (Expr, error) {
+func (p *Parser) parseArrayLit() (ast.Expr, error) {
 	tok := p.advance() // consume [
-	var items []Expr
+	var items []ast.Expr
 
 	p.skipSemicolons()
 	if p.current.Type != lexer.TOKEN_RBRACKET {
@@ -791,12 +781,12 @@ func (p *Parser) parseArrayLit() (Expr, error) {
 		return nil, err
 	}
 
-	return &ArrayLit{Items: items, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.ArrayLit{Items: items, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseMapLit() (Expr, error) {
+func (p *Parser) parseMapLit() (ast.Expr, error) {
 	tok := p.advance() // consume {
-	var keys, values []Expr
+	var keys, values []ast.Expr
 
 	p.skipSemicolons()
 	if p.current.Type != lexer.TOKEN_RBRACE {
@@ -827,10 +817,10 @@ func (p *Parser) parseMapLit() (Expr, error) {
 		return nil, err
 	}
 
-	return &MapLit{Keys: keys, Values: values, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.MapLit{Keys: keys, Values: values, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseMapEntry() (Expr, Expr, error) {
+func (p *Parser) parseMapEntry() (ast.Expr, ast.Expr, error) {
 	key, err := p.parseExpression(PREC_LOWEST)
 	if err != nil {
 		return nil, nil, err
@@ -845,7 +835,7 @@ func (p *Parser) parseMapEntry() (Expr, Expr, error) {
 	return key, val, nil
 }
 
-func (p *Parser) parseArrowFn() (Expr, error) {
+func (p *Parser) parseArrowFn() (ast.Expr, error) {
 	tok := p.advance() // consume ->
 	params, err := p.parseParamList()
 	if err != nil {
@@ -858,7 +848,7 @@ func (p *Parser) parseArrowFn() (Expr, error) {
 	return &ArrowFnExpr{Params: params, Body: body, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseInput() (Expr, error) {
+func (p *Parser) parseInput() (ast.Expr, error) {
 	tok := p.advance() // consume in
 	var prompt Expr
 
@@ -879,15 +869,15 @@ func (p *Parser) parseInput() (Expr, error) {
 	return &InputExpr{Prompt: prompt, Line: tok.Line, Col: tok.Col}, nil
 }
 
-func (p *Parser) parseStringInterp() (Expr, error) {
+func (p *Parser) parseStringInterp() (ast.Expr, error) {
 	line, col := p.current.Line, p.current.Col
-	var parts []Expr
+	var parts []ast.Expr
 
 	for {
 		if p.current.Type == lexer.TOKEN_STRING_PART {
 			tok := p.advance()
 			if tok.Literal != "" {
-				parts = append(parts, &StringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col})
+				parts = append(parts, &ast.StringLit{Value: tok.Literal, Line: tok.Line, Col: tok.Col})
 			}
 		} else if p.current.Type == lexer.TOKEN_INTERP_START {
 			p.advance() // consume ${
@@ -911,7 +901,7 @@ func (p *Parser) parseStringInterp() (Expr, error) {
 		return parts[0], nil
 	}
 
-	return &StringInterp{Parts: parts, Line: line, Col: col}, nil
+	return &ast.StringInterp{Parts: parts, Line: line, Col: col}, nil
 }
 
 func (p *Parser) parseParamList() ([]string, error) {
@@ -944,13 +934,13 @@ func (p *Parser) parseParamList() ([]string, error) {
 	return params, nil
 }
 
-func (p *Parser) parseBlock() ([]Stmt, error) {
+func (p *Parser) parseBlock() ([]ast.Stmt, error) {
 	if _, err := p.expect(lexer.TOKEN_LBRACE); err != nil {
 		return nil, err
 	}
 	p.skipSemicolons()
 
-	var stmts []Stmt
+	var stmts []ast.Stmt
 	for p.current.Type != lexer.TOKEN_RBRACE && p.current.Type != lexer.TOKEN_EOF {
 		stmt, err := p.parseStatement()
 		if err != nil {
@@ -982,6 +972,94 @@ func isAllUpper(s string) bool {
 		}
 	}
 	return true
+}
+
+func (p *Parser) parseUse() (ast.Stmt, error) {
+	tok := p.advance()
+	path, err := p.expect(lexer.TOKEN_STRING)
+	if err != nil {
+		return nil, err
+	}
+	return &ast.UseStmt{Path: path.Literal, Line: tok.Line, Col: tok.Col}, nil
+}
+
+func (p *Parser) parsePrivate() (ast.Stmt, error) {
+	tok := p.advance() // consume pv
+	inner, err := p.parseStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	// If inner is a ClassStmt or ast.StructDeclStmt, inject "pv"
+	if cls, ok := inner.(*ast.ClassStmt); ok {
+		cls.Visibility = "pv"
+	} else if strct, ok := inner.(*ast.StructDeclStmt); ok {
+		strct.Visibility = "pv"
+	}
+
+	return &ast.PrivateStmt{Inner: inner, Line: tok.Line, Col: tok.Col}, nil
+}
+
+func (p *Parser) parseClass() (ast.Stmt, error) {
+	tok := p.advance() // consume cl
+	name, err := p.expect(lexer.TOKEN_IDENT)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.TOKEN_LBRACE); err != nil {
+		return nil, err
+	}
+	p.skipSemicolons()
+
+	var fields []string
+	var methods []*ast.MethodDecl
+
+	for p.current.Type != lexer.TOKEN_RBRACE && p.current.Type != lexer.TOKEN_EOF {
+		vis := "" // default public
+		if p.current.Type == lexer.TOKEN_PV {
+			vis = "pv"
+			p.advance()
+		}
+
+		if p.current.Type == lexer.TOKEN_IDENT {
+			fields = append(fields, p.current.Literal) // In class, fields must be declared too
+			p.advance()
+		} else if p.current.Type == lexer.TOKEN_FN || p.current.Type == lexer.TOKEN_ASN {
+			isAsync := false
+			if p.current.Type == lexer.TOKEN_ASN {
+				isAsync = true
+				p.advance()
+			}
+			fnTok := p.current
+			if _, err := p.expect(lexer.TOKEN_FN); err != nil {
+				return nil, err
+			}
+			methodName, err := p.expect(lexer.TOKEN_IDENT)
+			if err != nil {
+				return nil, err
+			}
+			params, err := p.parseParamList()
+			if err != nil {
+				return nil, err
+			}
+			body, err := p.parseBlock()
+			if err != nil {
+				return nil, err
+			}
+
+			methods = append(methods, &ast.MethodDecl{
+				Name: methodName.Literal, Params: params, Body: body, Visibility: vis, IsAsync: isAsync, Line: fnTok.Line, Col: fnTok.Col,
+			})
+		} else {
+			return nil, p.errorf("E101", "expected class field or method")
+		}
+		p.skipSemicolons()
+	}
+	if _, err := p.expect(lexer.TOKEN_RBRACE); err != nil {
+		return nil, err
+	}
+
+	return &ast.ClassStmt{Name: name.Literal, Fields: fields, Methods: methods, Line: tok.Line, Col: tok.Col}, nil
 }
 
 // Ensure strings import is used

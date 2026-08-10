@@ -1,0 +1,22 @@
+// test_03_control.y
+score = 85
+
+if score > 90 {
+    pt "A"
+} elif score > 80 {
+    pt "B"
+} el {
+    pt "C"
+}
+
+// Switch statement (on)
+role = "admin"
+on (role) {
+    "admin" {
+        pt "is admin"
+    }
+    "user" {
+        pt "is user"
+    }
+    // no default case
+}

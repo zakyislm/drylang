@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"drylang/errfmt"
+	"drylang/ast"
 	"drylang/lexer"
 	"drylang/parser"
 	"fmt"
@@ -50,6 +51,7 @@ const (
 	BuiltinOp
 	BuiltinDb
 	BuiltinMath
+	BuiltinIn
 )
 
 // BuiltinNames maps function names to builtin IDs.
@@ -92,6 +94,7 @@ var BuiltinNames = map[string]BuiltinID{
 	"op":   BuiltinOp,
 	"db":   BuiltinDb,
 	"math": BuiltinMath,
+	"in":   BuiltinIn,
 }
 
 // Compiler compiles AST to bytecode.
@@ -123,7 +126,7 @@ func New() *Compiler {
 }
 
 // Compile compiles a program AST to bytecode.
-func (c *Compiler) Compile(prog *parser.Program) (*Chunk, []*CompiledFn, error) {
+func (c *Compiler) Compile(prog *parser.ast.Program) (*Chunk, []*CompiledFn, error) {
 	for _, stmt := range prog.Stmts {
 		if err := c.compileStmt(stmt); err != nil {
 			return nil, nil, err
@@ -174,7 +177,7 @@ func (c *Compiler) endScope() {
 	c.depth--
 }
 
-func (c *Compiler) compileStmt(stmt parser.Stmt) error {
+func (c *Compiler) compileStmt(stmt parser.ast.Stmt) error {
 	switch s := stmt.(type) {
 	case *parser.AssignStmt:
 		if err := c.compileExpr(s.Value); err != nil {
@@ -293,7 +296,47 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 
 	case *parser.StructDeclStmt:
 		// Store struct definition as a constant for runtime
-		ci := c.addConst(StructDef{Name: s.Name, Fields: s.Fields})
+		ci := c.addConst(StructDef{Name: s.Name, Fields: s.Fields, Visibility: s.Visibility})
+		nameIdx := c.addConst(s.Name)
+		c.emit(OpConst, ci, s.Line, s.Col)
+		c.globals[s.Name] = true
+		c.emit(OpSetGlobal, nameIdx, s.Line, s.Col)
+		return nil
+
+	case *parser.ClassStmt:
+		methods := make(map[string]ClassMethod)
+		for _, m := range s.Methods {
+			// Compile each method as a Chunk
+			sub := New()
+			sub.depth = 1 // Inside a method, we have local scope + `this`
+			
+			// Pre-declare `this` as local 0, which corresponds to the callee slot
+			sub.addLocal("this")
+			
+			// Pre-declare parameters starting from local 1
+			for _, param := range m.Params {
+				sub.addLocal(param)
+			}
+			
+			for _, bStmt := range m.Body {
+				if err := sub.compileStmt(bStmt); err != nil {
+					return err
+				}
+			}
+			// Implicit return unknown if no return statement
+			if len(m.Body) == 0 || !isReturn(m.Body[len(m.Body)-1]) {
+				sub.emit(OpUnknown, 0, m.Line, m.Col)
+				sub.emit(OpReturn, 0, m.Line, m.Col)
+			}
+			
+			methods[m.Name] = ClassMethod{
+				Chunk:      sub.chunk,
+				Visibility: m.Visibility,
+				IsAsync:    m.IsAsync,
+			}
+		}
+		
+		ci := c.addConst(ClassDef{Name: s.Name, Fields: s.Fields, Methods: methods, Visibility: s.Visibility})
 		nameIdx := c.addConst(s.Name)
 		c.emit(OpConst, ci, s.Line, s.Col)
 		c.globals[s.Name] = true
@@ -328,7 +371,7 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 	return nil
 }
 
-func (c *Compiler) compileExpr(expr parser.Expr) error {
+func (c *Compiler) compileExpr(expr parser.ast.Expr) error {
 	switch e := expr.(type) {
 	case *parser.NumberLit:
 		v, err := strconv.ParseFloat(e.Value, 64)
@@ -414,7 +457,7 @@ func (c *Compiler) compileExpr(expr parser.Expr) error {
 
 	case *parser.CallExpr:
 		// Check for built-in function calls
-		if ident, ok := e.Callee.(*parser.Ident); ok {
+		if ident, ok := e.Callee.(*parser.ast.Ident); ok {
 			if bid, found := BuiltinNames[ident.Name]; found {
 				for _, arg := range e.Args {
 					if err := c.compileExpr(arg); err != nil {
@@ -574,7 +617,7 @@ func (c *Compiler) compileFnDecl(s *parser.FnDeclStmt) error {
 	return nil
 }
 
-func (c *Compiler) compileIf(s *parser.IfStmt) error {
+func (c *Compiler) compileIf(s *parser.ast.IfStmt) error {
 	if err := c.compileExpr(s.Condition); err != nil {
 		return err
 	}
@@ -675,7 +718,7 @@ func (c *Compiler) compileOn(s *parser.OnStmt) error {
 	return nil
 }
 
-func (c *Compiler) compileLoop(s *parser.LoopStmt) error {
+func (c *Compiler) compileLoop(s *parser.ast.LoopStmt) error {
 	loopStart := len(c.chunk.Code)
 	c.loopCtx = append(c.loopCtx, loopContext{start: loopStart})
 
@@ -739,7 +782,7 @@ func (c *Compiler) compileLoop(s *parser.LoopStmt) error {
 	return nil
 }
 
-func (c *Compiler) compileTry(s *parser.TryStmt) error {
+func (c *Compiler) compileTry(s *parser.ast.TryStmt) error {
 	tryJump := c.emit(OpTry, 0, s.Line, s.Col)
 
 	c.beginScope()
@@ -750,8 +793,8 @@ func (c *Compiler) compileTry(s *parser.TryStmt) error {
 	}
 	c.endScope()
 
-	endJump := c.emit(OpJump, 0, s.Line, s.Col)
 	c.emit(OpEndTry, 0, s.Line, s.Col)
+	endJump := c.emit(OpJump, 0, s.Line, s.Col)
 
 	// Patch try jump to catch block
 	c.chunk.Code[tryJump].Operand = len(c.chunk.Code)
@@ -772,6 +815,26 @@ func (c *Compiler) compileTry(s *parser.TryStmt) error {
 
 // StructDef represents a struct type definition at runtime.
 type StructDef struct {
-	Name   string
-	Fields []string
+	Name       string
+	Fields     []string
+	Visibility string
+}
+
+// ClassDef represents a class type definition at runtime.
+type ClassDef struct {
+	Name       string
+	Fields     []string
+	Methods    map[string]ClassMethod
+	Visibility string
+}
+
+type ClassMethod struct {
+	Chunk      *Chunk
+	Visibility string
+	IsAsync    bool
+}
+
+func isReturn(stmt parser.ast.Stmt) bool {
+	_, ok := stmt.(*parser.ast.ReturnStmt)
+	return ok
 }

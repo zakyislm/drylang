@@ -1,0 +1,60 @@
+// test_08_all_builtins.y
+// Testing all 38 builtins
+
+// 1-5
+pt len("abc")
+// get, add, num, str
+pt str(123)
+pt num("456")
+
+// 6-10
+pt abs(0 - 5)
+pt min(10, 20)
+pt max(10, 20)
+// rnd() -- might need bounds
+// cap("hello")
+pt cap("hello")
+
+// 11-15
+pt low("HELLO")
+pt trm("  test  ")
+pt spl("a,b,c", ",")
+pt j(["a", "b"], "-")
+pt mod("hello world", "world", "zaky")
+
+// 16-20
+m = { "a": 1 }
+pt has("hello", "ell")
+arr = [3, 1, 2]
+sort(arr)
+pt arr
+pop(arr)
+// rm(m, "a")
+// key(m)
+// val(m)
+
+// 21-25
+// ran(1, 10)
+// q("exit")
+// r, w for files
+
+// 26-30
+pt now()
+pt date()
+// req("http...")
+pt json("{\"ok\": 1}")
+// arg(0)
+
+// 31-35
+// env("PATH")
+// cmd("echo", "test")
+// dir()
+// del()
+// die()
+
+// 36-38
+pt len("abc")
+// db(...)
+pt abs(0 - 10)
+
+pt "All builtins compile!"

@@ -35,6 +35,7 @@ const (
 	TOKEN_ERR     // err
 	TOKEN_PV      // pv
 	TOKEN_USE     // use
+	TOKEN_CL      // cl
 	TOKEN_UNKNOWN // unknown
 	TOKEN_PT      // pt
 	TOKEN_IN      // in
@@ -100,6 +101,7 @@ var tokenNames = map[TokenType]string{
 	TOKEN_ERR:          "err",
 	TOKEN_PV:           "pv",
 	TOKEN_USE:          "use",
+	TOKEN_CL:           "cl",
 	TOKEN_UNKNOWN:      "unknown",
 	TOKEN_PT:           "pt",
 	TOKEN_IN:           "in",
@@ -166,6 +168,7 @@ var keywords = map[string]TokenType{
 	"err":     TOKEN_ERR,
 	"pv":      TOKEN_PV,
 	"use":     TOKEN_USE,
+	"cl":      TOKEN_CL,
 	"unknown": TOKEN_UNKNOWN,
 	"pt":      TOKEN_PT,
 	"in":      TOKEN_IN,
