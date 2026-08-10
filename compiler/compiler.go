@@ -101,6 +101,7 @@ type Compiler struct {
 	depth   int
 	fns     []*CompiledFn
 	loopCtx []loopContext
+	globals map[string]bool
 }
 
 type local struct {
@@ -116,7 +117,8 @@ type loopContext struct {
 // New creates a new compiler.
 func New() *Compiler {
 	return &Compiler{
-		chunk: &Chunk{},
+		chunk:   &Chunk{},
+		globals: make(map[string]bool),
 	}
 }
 
@@ -181,10 +183,14 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 		idx := c.resolveLocal(s.Name)
 		if idx >= 0 {
 			c.emit(OpSetLocal, idx, s.Line, s.Col)
+		} else if c.globals[s.Name] {
+			ci := c.addConst(s.Name)
+			c.emit(OpSetGlobal, ci, s.Line, s.Col)
 		} else if c.depth > 0 {
 			slot := c.addLocal(s.Name)
 			c.emit(OpSetLocal, slot, s.Line, s.Col)
 		} else {
+			c.globals[s.Name] = true
 			ci := c.addConst(s.Name)
 			c.emit(OpSetGlobal, ci, s.Line, s.Col)
 		}
@@ -197,6 +203,7 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 		if c.depth > 0 {
 			c.addLocal(s.Name)
 		} else {
+			c.globals[s.Name] = true
 			ci := c.addConst(s.Name)
 			c.emit(OpSetGlobal, ci, s.Line, s.Col)
 		}
@@ -207,6 +214,7 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 		if c.depth > 0 {
 			c.addLocal(s.Name)
 		} else {
+			c.globals[s.Name] = true
 			ci := c.addConst(s.Name)
 			c.emit(OpSetGlobal, ci, s.Line, s.Col)
 		}
@@ -288,6 +296,7 @@ func (c *Compiler) compileStmt(stmt parser.Stmt) error {
 		ci := c.addConst(StructDef{Name: s.Name, Fields: s.Fields})
 		nameIdx := c.addConst(s.Name)
 		c.emit(OpConst, ci, s.Line, s.Col)
+		c.globals[s.Name] = true
 		c.emit(OpSetGlobal, nameIdx, s.Line, s.Col)
 		return nil
 
@@ -530,6 +539,7 @@ func (c *Compiler) compileExpr(expr parser.Expr) error {
 
 func (c *Compiler) compileFnDecl(s *parser.FnDeclStmt) error {
 	fnCompiler := New()
+	fnCompiler.globals = c.globals
 	fnCompiler.depth = 1
 	for _, p := range s.Params {
 		fnCompiler.addLocal(p)
@@ -556,6 +566,7 @@ func (c *Compiler) compileFnDecl(s *parser.FnDeclStmt) error {
 	if c.depth > 0 {
 		c.addLocal(s.Name)
 	} else {
+		c.globals[s.Name] = true
 		ci := c.addConst(s.Name)
 		c.emit(OpSetGlobal, ci, s.Line, s.Col)
 	}
