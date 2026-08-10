@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $repo = "zakyislm/drylang"
-$binName = "y.exe"
+$binName = "dry.exe"
 $installDir = Join-Path $env:USERPROFILE ".drylang\bin"
 
 Write-Host "Installing dryLang..." -ForegroundColor Cyan
@@ -45,4 +45,4 @@ if ($userPath -notmatch [regex]::Escape($installDir)) {
 Write-Host "`nInstallation Complete!" -ForegroundColor Green
 Write-Host "dryLang is installed at: $binPath"
 Write-Host "Please restart your terminal or run: `$env:Path += `";$installDir`""
-Write-Host "Then type 'y' to verify."
+Write-Host "Then type 'dry' to verify."

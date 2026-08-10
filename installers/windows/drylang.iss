@@ -5,7 +5,7 @@ AppPublisher=zakyislm
 AppPublisherURL=https://github.com/zakyislm/drylang
 DefaultDirName={pf}\dryLang
 DefaultGroupName=dryLang
-UninstallDisplayIcon={app}\y.exe
+UninstallDisplayIcon={app}\dry.exe
 Compression=lzma2
 SolidCompression=yes
 OutputDir=.\bin
@@ -14,16 +14,16 @@ ArchitecturesInstallIn64BitMode=x64
 ChangesEnvironment=yes
 
 [Files]
-; The actual binary is y.exe. We duplicate it as aliases so users can run 'y', 'dry', or 'drylang'.
-Source: "..\..\y.exe"; DestDir: "{app}"; DestName: "y.exe"; Flags: ignoreversion
-Source: "..\..\y.exe"; DestDir: "{app}"; DestName: "dry.exe"; Flags: ignoreversion
-Source: "..\..\y.exe"; DestDir: "{app}"; DestName: "drylang.exe"; Flags: ignoreversion
+; The actual binary is dry.exe. We duplicate it as aliases so users can run 'y', 'dry', or 'drylang'.
+Source: "..\..\dry.exe"; DestDir: "{app}"; DestName: "y.exe"; Flags: ignoreversion
+Source: "..\..\dry.exe"; DestDir: "{app}"; DestName: "dry.exe"; Flags: ignoreversion
+Source: "..\..\dry.exe"; DestDir: "{app}"; DestName: "drylang.exe"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Uninstall dryLang"; Filename: "{uninstallexe}"
 
 [Registry]
-; Add the installation directory to the system PATH so 'y' works from anywhere
+; Add the installation directory to the system PATH so 'dry' works from anywhere
 Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; \
     ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; \
     Check: NeedsAddPath(ExpandConstant('{app}'))
