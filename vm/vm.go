@@ -56,6 +56,16 @@ type tryFrame struct {
 	frameDepth int
 }
 
+type Instance struct {
+	Class  compiler.ClassDef
+	Fields map[string]Value
+}
+
+type BoundMethod struct {
+	Instance *Instance
+	Method   compiler.ClassMethod
+}
+
 // New creates a new VM.
 func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
 	return &VM{

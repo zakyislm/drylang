@@ -4,6 +4,7 @@ import (
 	"drylang/ast"
 	"drylang/core"
 	"drylang/errfmt"
+	"drylang/ast"
 	"drylang/lexer"
 	"drylang/compiler/varhandler"
 	"drylang/compiler/exprhandler"
