@@ -1,4 +1,4 @@
-# Database
+﻿# Database
 
 DryLang has **SQLite natively compiled into the runtime**. You do not need to install any external drivers.
 
@@ -9,7 +9,7 @@ Always connect first.
 db("connect", "sqlite", "app.db")
 ```
 ### 2. Execute (Insert / Update / Delete)
-Executes a query without expecting a return row.
+Executes a query without expecting a rev row.
 ```rust
 db("exec", "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
 db("exec", "INSERT INTO users (name) VALUES ('Zaky')")
@@ -17,7 +17,7 @@ db("exec", "INSERT INTO users (name) VALUES ('Zaky')")
 ### 3. Query (Select)
 Returns an array of maps (rows).
 ```rust
-let users = db("query", "SELECT * FROM users")
+users = db("query", "SELECT * FROM users")
 pt(users[0].name)
 ```
 ### 4. Close

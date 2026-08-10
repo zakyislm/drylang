@@ -1,17 +1,17 @@
-# Loops
+﻿# Loops
 
 DryLang uses the `or` keyword for all looping needs.
 
 ## Standard For Loop
 ```rust
-for let i = 0; i < 5; i = i + 1 {
+for i = 0; i < 5; i = i + 1 {
     pt(i)
 }
 ```
 ## While-style Loop
 You can omit the initializer and incrementor to use `or` like a `while` loop.
 ```rust
-let count = 0
+count = 0
 for count < 3 {
     pt(count)
     count = count + 1
@@ -20,7 +20,7 @@ for count < 3 {
 ## Break and Continue
 Use `reak` to exit a loop early, and `continue` to skip the current iteration.
 ```rust
-for let i = 0; i < 10; i = i + 1 {
+for i = 0; i < 10; i = i + 1 {
     if i == 5 {
         break
     }

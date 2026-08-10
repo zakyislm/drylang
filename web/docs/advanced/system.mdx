@@ -1,20 +1,20 @@
-# System & OS
+﻿# System & OS
 
 ## Environment & Args
 - **`.env` Auto-loading**: DryLang automatically looks for a `.env` file in the directory where you run the `dry` command. If it exists, all variables are automatically loaded into the system environment.
 - **`env(key)`**: Retrieve a system environment variable.
   ```rust
-  let path = env("PATH")
+  path = env("PATH")
   ```
 - **`arg(index)`**: Retrieve command line arguments passed to the script.
   ```rust
-  let firstArg = arg(1) // arg(0) is the executable
+  firstArg = arg(1) // arg(0) is the executable
   ```
 
 ## Execution Control
-- **`cmd(command)`**: Execute a shell command and return the output.
+- **`cmd(command)`**: Execute a shell command and rev the output.
   ```rust
-  let output = cmd("dir")
+  output = cmd("dir")
   pt(output)
   ```
 - **`q(milliseconds)`**: Pause (sleep) the program.
@@ -29,3 +29,4 @@
 ## Date & Time
 - **`now()`**: Returns UNIX timestamp.
 - **`date()`**: Returns a map containing `sec`, `min`, `hour`, `day`, `month`, `year`, `format`.
+

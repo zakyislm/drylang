@@ -1,13 +1,13 @@
-# String Manipulation
+﻿# String Manipulation
 
 ## \spl(string, delimiter)Splits a string into an array.
 ```rust
-let words = spl("apple,banana,orange", ",")
+words = spl("apple,banana,orange", ",")
 // ["apple", "banana", "orange"]
 ```
 ## \	rm(string)Removes whitespace from both ends.
 ```rust
-let clean = trm("   hello   ") // "hello"
+clean = trm("   hello   ") // "hello"
 ```
 ## `cap(string)` & \low(string)Uppercase and lowercase.
 ```rust
@@ -16,9 +16,9 @@ pt(low("ZAKY")) // "zaky"
 ```
 ## \mod(string, old, new)Replaces all instances of a substring.
 ```rust
-let txt = mod("hello world", "world", "drylang") // "hello drylang"
+txt = mod("hello world", "world", "drylang") // "hello drylang"
 ```
 ## `has(string, substring)Returns `	rue\ if the substring exists.
 ```rust
-let exists = has("hello", "ell") // true
+exists = has("hello", "ell") // true
 ```

@@ -1,26 +1,26 @@
-# Operators
+﻿# Operators
 
 DryLang supports standard arithmetic, comparison, and logical operators, along with modern shorthand syntax.
 
 ## Arithmetic
 ```rust
-let a = 10 + 5
-let b = 10 - 5
-let c = 10 * 5
-let d = 10 / 5
+a = 10 + 5
+b = 10 - 5
+c = 10 * 5
+d = 10 / 5
 ```
 ## Logical & Comparison
 ```rust
-let isEqual = (a == b)
-let isNot = (a != b)
-let isGreater = (a > b)
-let andOp = (true & false)
-let orOp  = (true | false)
+isEqual = (a == b)
+isNot = (a != b)
+isGreater = (a > b)
+andOp = (true & false)
+orOp  = (true | false)
 ```
 ## Nullish Coalescing (`??`)
 A very powerful operator that returns the right-hand side if the left-hand side is null/unknown (or falsy).
 ```rust
-let userInput = null
-let name = userInput ?? "Guest"
+userInput = null
+name = userInput ?? "Guest"
 pt(name) // Outputs: Guest
 ```
