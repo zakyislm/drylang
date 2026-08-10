@@ -1,28 +1,39 @@
-﻿# Loops
+# Loops
 
-DryLang uses the `or` keyword for all looping needs.
+DryLang uses the `lp` keyword for all looping.
 
-## Standard For Loop
+## Fixed Count Loop
+Loop a specific number of times:
 ```rust
-for i = 0; i < 5; i = i + 1 {
-    pt(i)
+lp 5 {
+    pt("hello")
 }
 ```
-## While-style Loop
-You can omit the initializer and incrementor to use `or` like a `while` loop.
+
+## Conditional Loop
+Loop while a condition is true:
 ```rust
 count = 0
-for count < 3 {
+lp count < 3 {
     pt(count)
     count = count + 1
 }
 ```
-## Break and Continue
-Use `reak` to exit a loop early, and `continue` to skip the current iteration.
+
+## Infinite Loop
+Omit the expression for an infinite loop:
 ```rust
-for i = 0; i < 10; i = i + 1 {
+lp {
+    pt("forever")
+}
+```
+
+## Done and Con
+Use `done` to break out of a loop, and `con` to skip to the next iteration.
+```rust
+lp 10 {
     if i == 5 {
-        break
+        done
     }
     pt(i)
 }

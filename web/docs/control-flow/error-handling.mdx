@@ -1,16 +1,15 @@
-﻿# Error Handling
+# Error Handling
 
-DryLang provides a simplified `	ry` and `err` block to elegantly handle exceptions without crashing the VM.
+DryLang uses `try` and `err` blocks to handle errors gracefully.
 
 ## Try / Err
-The `err` block catches any panic or error that occurs inside the `	ry` block. The error message is automatically injected into the `e` variable (or the specified variable).
+The `err` block catches any error from the `try` block. The error message is injected into the specified variable.
 ```rust
 try {
-    // Attempting to open a non-existent file will throw an error
     content = r("fake_file.txt")
 } err e {
-    pt("Caught an error: " + e)
+    pt("Caught: " + e)
 }
 
-pt("Program continues running safely.")
+pt("Program continues safely.")
 ```

@@ -1,30 +1,30 @@
-﻿# Conditionals
+# Conditionals
 
-## If / Else
-Standard `if` and `else` logic.
+## If / Elif / El
+DryLang uses `if`, `elif`, and `el` (else).
 ```rust
 score = 85
 
 if score > 80 {
     pt("Great job!")
-} else {
+} elif score > 50 {
+    pt("Not bad")
+} el {
     pt("Keep trying!")
 }
 ```
-## On / Case (Switch Replacement)
-DryLang replaces the traditional `switch` statement with a highly ergonomic `on` and `case` block.
+
+## On (Switch)
+The `on` statement replaces traditional `switch`. No `case` keyword — just value and block.
 ```rust
 role = "admin"
 
-on role {
-    case "admin" {
+on(role) {
+    "admin" {
         pt("Access granted: Admin")
     }
-    case "user" {
+    "user" {
         pt("Access granted: User")
-    }
-    case ? { // The question mark acts as the 'default' fallback
-        pt("Access denied")
     }
 }
 ```

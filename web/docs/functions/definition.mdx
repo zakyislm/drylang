@@ -1,6 +1,6 @@
-﻿# Function Definition
+# Function Definition
 
-Define a function using the `n` keyword.
+Define a function using the `fn` keyword.
 ```rust
 fn greet(name) {
     pt("Hello, " + name + "!")
@@ -8,13 +8,24 @@ fn greet(name) {
 
 greet("Zaky")
 ```
+
 ## Returning Values
-Use the eturn\ keyword to output a value from a function.
+Use `rev` to return a value from a function.
 ```rust
 fn add(a, b) {
     rev a + b
 }
 
 result = add(10, 20)
-pt("Result:", result) // 30
+pt(result) // 30
+```
+
+## Async Functions
+Use `asn fn` to declare an async function, and `awt` to await it.
+```rust
+asn fn fetchData() {
+    rev req("https://api.example.com")
+}
+
+data = awt fetchData()
 ```

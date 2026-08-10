@@ -1,18 +1,21 @@
-﻿# Variables
+# Variables
 
-In DryLang, you can declare a variable simply by assigning a value to it, or you can explicitly use the `let` keyword.
+In DryLang, variables are declared by direct assignment. No keywords like `let` or `var` are needed.
 
 ## Declaration and Assignment
 ```rust
-// Implicit declaration
 name = "Zaky"
 age = 25
-
-// Explicit declaration
-city = "Jakarta"
 ```
-Variables are dynamically typed, meaning you can reassign them to a different type later:
+
+Variables are dynamically typed — you can reassign them to a different type:
 ```rust
 score = 100
 score = "One hundred" // Perfectly valid
+```
+
+## Constants
+Use `cns` to declare a constant that cannot be reassigned.
+```rust
+cns PI = 3.14159
 ```

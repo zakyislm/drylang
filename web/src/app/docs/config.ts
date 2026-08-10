@@ -47,7 +47,6 @@ export const DOCS_STRUCTURE: DocGroup[] = [
     items: [
       { title: 'Overview', slug: 'functions' },
       { title: 'Definition', slug: 'functions/definition' },
-      { title: 'Arrow Functions', slug: 'functions/arrow-functions' },
       { title: 'Scope & Closures', slug: 'functions/scope-closures' },
     ],
   },
@@ -55,29 +54,7 @@ export const DOCS_STRUCTURE: DocGroup[] = [
     group: 'Data Structures',
     items: [
       { title: 'Overview', slug: 'data-structures' },
-      { title: 'Arrays', slug: 'data-structures/arrays' },
-      { title: 'Maps', slug: 'data-structures/maps' },
       { title: 'Structs & Classes', slug: 'data-structures/structs' },
-    ],
-  },
-  {
-    group: 'Built-ins',
-    items: [
-      { title: 'Overview', slug: 'built-ins' },
-      { title: 'Input & Output', slug: 'built-ins/io' },
-      { title: 'Strings', slug: 'built-ins/strings' },
-      { title: 'Math', slug: 'built-ins/math' },
-      { title: 'Collections', slug: 'built-ins/collections' },
-    ],
-  },
-  {
-    group: 'Advanced Features',
-    items: [
-      { title: 'Overview', slug: 'advanced' },
-      { title: 'File System', slug: 'advanced/file-system' },
-      { title: 'Networking', slug: 'advanced/networking' },
-      { title: 'Database', slug: 'advanced/database' },
-      { title: 'System & OS', slug: 'advanced/system' },
     ],
   }
 ];
