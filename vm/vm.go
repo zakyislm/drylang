@@ -56,15 +56,7 @@ type tryFrame struct {
 	frameDepth int
 }
 
-type Instance struct {
-	Class  compiler.ClassDef
-	Fields map[string]Value
-}
 
-type BoundMethod struct {
-	Instance *Instance
-	Method   compiler.ClassMethod
-}
 
 // New creates a new VM.
 func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
@@ -1180,6 +1172,10 @@ func (vm *VM) callOp(argCount, line, col int) error {
 		}
 		vm.frames = append(vm.frames, frame)
 
+		for vm.sp < frame.bp + bound.Method.Chunk.LocalsCount + 1 {
+			vm.push(core.UnknownValue)
+		}
+
 		savedIP := vm.ip
 		savedChunk := chunk
 		err := vm.execute(bound.Method.Chunk)
@@ -1218,6 +1214,10 @@ func (vm *VM) callOp(argCount, line, col int) error {
 		chunk: chunk,
 	}
 	vm.frames = append(vm.frames, frame)
+
+	for vm.sp < frame.bp + fn.Chunk.LocalsCount + 1 {
+		vm.push(core.UnknownValue)
+	}
 
 	savedIP := vm.ip
 	savedChunk := chunk

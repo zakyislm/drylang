@@ -54,25 +54,15 @@ func (vm *VM) PopFrame() {
 }
 
 func (vm *VM) GetIP() int {
-	if len(vm.frames) == 0 {
-		return vm.ip
-	}
-	return vm.frames[len(vm.frames)-1].ip
+	return vm.ip
 }
 
 func (vm *VM) SetIP(ip int) {
-	if len(vm.frames) == 0 {
-		vm.ip = ip
-	} else {
-		vm.frames[len(vm.frames)-1].ip = ip
-	}
+	vm.ip = ip
 }
 
 func (vm *VM) GetChunk() *core.Chunk {
-	if len(vm.frames) == 0 {
-		return vm.chunk
-	}
-	return vm.frames[len(vm.frames)-1].chunk
+	return vm.chunk
 }
 
 func (vm *VM) Errorf(format string, args ...interface{}) error {

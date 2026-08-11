@@ -93,6 +93,7 @@ type Chunk struct {
 	Constants []interface{} // string, float64, etc.
 	Lines     []int         // source line for each instruction
 	Cols      []int         // source col for each instruction
+	LocalsCount int         // Number of locals used in this chunk
 }
 
 func (c *Chunk) Emit(op Opcode, operand int, line, col int) int {

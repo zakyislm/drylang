@@ -4,7 +4,6 @@ import (
 	"drylang/ast"
 	"drylang/core"
 	"drylang/errfmt"
-	"drylang/ast"
 	"drylang/lexer"
 	"drylang/compiler/varhandler"
 	"drylang/compiler/exprhandler"
@@ -14,12 +13,13 @@ import (
 
 // Compiler compiles AST to bytecode.
 type Compiler struct {
-	chunk   *core.Chunk
-	locals  []local
-	depth   int
-	fns     []*core.CompiledFn
-	loopCtx []loopContext
-	globals map[string]bool
+	chunk     *core.Chunk
+	locals    []local
+	depth     int
+	maxLocals int
+	fns       []*core.CompiledFn
+	loopCtx   []loopContext
+	globals   map[string]bool
 }
 
 type local struct {
@@ -47,6 +47,7 @@ func (c *Compiler) Compile(prog *ast.Program) (*core.Chunk, []*core.CompiledFn, 
 			return nil, nil, err
 		}
 	}
+	c.chunk.LocalsCount = c.maxLocals
 	return c.chunk, c.fns, nil
 }
 
@@ -77,6 +78,9 @@ func (c *Compiler) resolveLocal(name string) int {
 
 func (c *Compiler) addLocal(name string) int {
 	c.locals = append(c.locals, local{name: name, depth: c.depth})
+	if len(c.locals) > c.maxLocals {
+		c.maxLocals = len(c.locals)
+	}
 	return len(c.locals) - 1
 }
 
@@ -271,6 +275,7 @@ case *ast.ReturnStmt:
 				sub.emit(core.OpUnknown, 0, m.Line, m.Col)
 				sub.emit(core.OpReturn, 0, m.Line, m.Col)
 			}
+			sub.chunk.LocalsCount = sub.maxLocals
 
 			methods[m.Name] = core.ClassMethod{
 				Chunk: sub.chunk,
@@ -487,6 +492,7 @@ func (c *Compiler) compileExpr(expr ast.Expr) error {
 		}
 		fnCompiler.emit(core.OpUnknown, 0, e.Line, e.Col) // default return
 		fnCompiler.emit(core.OpReturn, 0, e.Line, e.Col)
+		fnCompiler.chunk.LocalsCount = fnCompiler.maxLocals
 
 		fn := &core.CompiledFn{
 			Chunk: fnCompiler.chunk,
@@ -543,6 +549,7 @@ func (c *Compiler) compileFnDecl(s *ast.FnDeclStmt) error {
 	}
 	fnCompiler.emit(core.OpUnknown, 0, s.Line, s.Col) // default return unknown
 	fnCompiler.emit(core.OpReturn, 0, s.Line, s.Col)
+	fnCompiler.chunk.LocalsCount = fnCompiler.maxLocals
 
 	fn := &core.CompiledFn{
 		Chunk: fnCompiler.chunk,
@@ -675,7 +682,8 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 		// Counted loop: emit counter init and check
 		ci := c.addConst(float64(0))
 		c.emit(core.OpConst, ci, s.Line, s.Col) // push 0 as counter
-		c.addLocal("i")
+		iSlot := c.addLocal("i")
+		c.emit(core.OpSetLocal, iSlot, s.Line, s.Col)
 
 		loopStart = len(c.chunk.Code) // actual loop start
 		c.loopCtx[len(c.loopCtx)-1].start = loopStart
@@ -703,7 +711,7 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 		c.emit(core.OpAdd, 0, s.Line, s.Col)
 		c.emit(core.OpSetLocal, idx, s.Line, s.Col)
 
-		c.emit(core.OpLoop, loopStart, s.Line, s.Col)
+		c.emit(core.OpLoop, len(c.chunk.Code)+1-loopStart, s.Line, s.Col)
 		c.chunk.Code[exitJump].Operand = len(c.chunk.Code)
 
 		// Remove counter local
@@ -718,7 +726,7 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 			}
 		}
 		c.endScope()
-		c.emit(core.OpLoop, loopStart, s.Line, s.Col)
+		c.emit(core.OpLoop, len(c.chunk.Code)+1-loopStart, s.Line, s.Col)
 	}
 
 	// Patch breaks
