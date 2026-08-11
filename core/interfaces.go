@@ -57,6 +57,8 @@ type VMCore interface {
 	Push(val Value)
 	Pop() Value
 	Peek() Value
+	Sp() int
+	Stack() []Value
 	SetGlobal(name string, val Value)
 	GetGlobal(name string) (Value, bool)
 	SetLocal(slot int, val Value)
@@ -71,4 +73,5 @@ type VMCore interface {
 	PushFrame(fn *CompiledFn, argCount int) error
 	PopFrame()
 	Errorf(format string, args ...interface{}) error
+	GetCurrentClosure() *Closure
 }

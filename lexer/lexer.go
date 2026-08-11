@@ -117,15 +117,17 @@ func (l *Lexer) nextToken() (Token, error) {
 
 	// Slash or Comments
 	if ch == '/' {
-		if l.peek() == '/' {
+		if l.peekAt(1) == '/' {
 			// Single-line comment
+			l.advance() // consume first /
 			l.advance() // consume second /
 			for l.pos < len(l.input) && l.peek() != '\n' {
 				l.advance()
 			}
 			return l.nextToken() // skip comment, get next
-		} else if l.peek() == '*' {
+		} else if l.peekAt(1) == '*' {
 			// Multi-line comment
+			l.advance() // consume first /
 			l.advance() // consume *
 			for l.pos < len(l.input) {
 				if l.peek() == '*' && l.peekAt(1) == '/' {
@@ -143,6 +145,8 @@ func (l *Lexer) nextToken() (Token, error) {
 			}
 			return l.nextToken() // skip comment, get next
 		}
+		
+		l.advance() // consume / for division
 		return l.makeToken(TOKEN_SLASH, "/", line, col), nil
 	}
 

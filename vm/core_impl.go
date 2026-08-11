@@ -40,7 +40,7 @@ func (vm *VM) CallFunction(fn *core.CompiledFn, argCount int) error {
 
 func (vm *VM) PushFrame(fn *core.CompiledFn, argCount int) error {
 	frame := callFrame{
-		fn:    fn,
+		closure: &core.Closure{Fn: fn, Env: make(map[string]core.Value)},
 		ip:    0,
 		bp:    vm.sp - argCount,
 		chunk: fn.Chunk,
@@ -100,3 +100,5 @@ func (vm *VM) Throw() error {
 	return fmt.Errorf("%s", v.String())
 }
 
+func (vm *VM) Sp() int { return vm.sp }
+func (vm *VM) Stack() []core.Value { return vm.stack[:vm.sp] }

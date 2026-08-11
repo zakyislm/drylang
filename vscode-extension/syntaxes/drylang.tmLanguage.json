@@ -25,8 +25,13 @@
     "comments": {
       "patterns": [
         {
-          "begin": "(?<![a-zA-Z0-9_])\\.(?![a-zA-Z0-9_])",
-          "end": "(?<![a-zA-Z0-9_])\\.(?![a-zA-Z0-9_])",
+          "begin": "//",
+          "end": "$",
+          "name": "comment.line.double-slash.drylang"
+        },
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
           "name": "comment.block.drylang"
         }
       ]
@@ -90,11 +95,11 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(fn|rev|cns|if|el|elif|lp|done|chk|err|on|use|pv|try)\\b",
+          "match": "\\b(fn|if|el|elif|lp|cns|rev|done|con|on|asn|awt|try|err|pv|use|mul|uni)\\b",
           "name": "keyword.control.drylang"
         },
         {
-          "match": "\\b(tr|f)\\b",
+          "match": "\\b(t|f)\\b",
           "name": "constant.language.boolean.drylang"
         },
         {
@@ -106,7 +111,7 @@
     "builtins": {
       "patterns": [
         {
-          "match": "\\b(pt|in|now|date|req|json|arg|env|cmd|dir|del|die|len|get|add|num|str|abs|min|max|rnd|ran|cap|low|trm|spl|j|mod|has|sort|pop|rm|key|val)\\b",
+          "match": "\\b(len|get|add|num|str|abs|min|max|rnd|cap|low|trm|spl|j|mod|has|sort|pop|rm|key|val|ran|q|r|w|now|date|req|json|arg|env|cmd|dir|del|die|op|db|math|in|pt|cl)\\b",
           "name": "support.function.drylang"
         }
       ]
@@ -122,7 +127,7 @@
     "operators": {
       "patterns": [
         {
-          "match": "(->|\\+|-|\\*|/|%|==|!=|<|>|&|\\||!|=)",
+          "match": "(->|\\+|-|\\*|/|%|!=|<|>|&|\\||!|=)",
           "name": "keyword.operator.drylang"
         }
       ]

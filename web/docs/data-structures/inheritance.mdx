@@ -1,0 +1,21 @@
+# Inheritance
+
+Classes can extend other classes using the `<-` syntax. This allows the child class to inherit fields and methods from the parent class.
+
+```rust
+cl Animal {
+    name
+    fn speak() {
+        rev "..."
+    }
+}
+
+cl Dog <- Animal {
+    fn speak() {
+        rev "Woof!"
+    }
+}
+
+dog = Dog()
+pt(dog.speak()) // "Woof!"
+```

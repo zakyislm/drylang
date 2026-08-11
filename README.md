@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8.svg?logo=go)](#)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](#)
 
-*Writeless, get more. Say exactly what you mean. Max 4 characters.*
+*Write Less Get More. Say exactly what you mean. Max 4 characters.*
 
 </div>
 

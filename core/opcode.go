@@ -65,7 +65,7 @@ const (
 	OpConcat
 
 	// Async
-	OpAsync
+	OpAsyncCall
 	OpAwait
 
 	// Error handling
@@ -123,4 +123,5 @@ type CompiledFn struct {
 	Name       string
 	ParamCount int
 	IsAsync    bool
+	LocalNames map[int]string
 }

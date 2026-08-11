@@ -9,6 +9,7 @@ import (
 	"drylang/vm/controlhandler"
 	"drylang/vm/errorhandler"
 	"drylang/vm/functionhandler"
+	"drylang/vm/iohandler"
 	"drylang/vm/mathhandler"
 	"drylang/vm/varhandler"
 	"encoding/json"
@@ -40,10 +41,20 @@ type VM struct {
 	frames       []callFrame
 	tryStack     []tryFrame
 	stdinScanner *bufio.Scanner
+
+	// Async state
+	asyncWg    sync.WaitGroup
+	asyncPools map[*core.CompiledFn]chan asyncTask
+	poolMutex  sync.Mutex
+}
+
+type asyncTask struct {
+	fn   *core.CompiledFn
+	args []core.Value
 }
 
 type callFrame struct {
-	fn    *core.CompiledFn
+	closure *core.Closure
 	ip    int
 	bp    int // base pointer (stack offset)
 	chunk *core.Chunk
@@ -61,12 +72,13 @@ type tryFrame struct {
 // New creates a new VM.
 func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
 	return &VM{
-		chunk:   chunk,
-		fns:     fns,
-		globals: make(map[string]core.Value),
-		stack:   make([]core.Value, 4096),
-		sp:      0,
-		ip:      0,
+		chunk:      chunk,
+		fns:        fns,
+		globals:    make(map[string]core.Value),
+		stack:      make([]core.Value, 4096),
+		sp:         0,
+		ip:         0,
+		asyncPools: make(map[*core.CompiledFn]chan asyncTask),
 	}
 }
 
@@ -95,13 +107,48 @@ func (vm *VM) runtimeErr(code string, line, col int, format string, args ...inte
 
 // Run executes the main chunk.
 func (vm *VM) Run() error {
+	// Push base frame for global scope so top-level blocks (loop/try) can use locals
+	if len(vm.frames) == 0 {
+		vm.frames = append(vm.frames, callFrame{
+			closure: &core.Closure{Fn: &core.CompiledFn{Chunk: vm.chunk}, Env: make(map[string]core.Value)},
+			ip:    0,
+			bp:    vm.sp,
+			chunk: vm.chunk,
+		})
+		for i := 0; i < vm.chunk.LocalsCount; i++ {
+			vm.push(core.UnknownValue)
+		}
+	}
 	return vm.execute(vm.chunk)
 }
 
 func (vm *VM) execute(chunk *core.Chunk) error {
 	vm.chunk = chunk
 	vm.ip = 0
+	baseDepth := len(vm.frames)
 
+	for {
+		err := vm.executeInner(vm.chunk)
+		if err == nil {
+			return nil
+		}
+
+		if len(vm.tryStack) > 0 {
+			tf := vm.tryStack[len(vm.tryStack)-1]
+			if tf.frameDepth == baseDepth {
+				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+				vm.sp = tf.sp
+				vm.push(core.StringVal(err.Error()))
+				vm.ip = tf.catchIP
+				vm.chunk = chunk
+				continue
+			}
+		}
+		return err
+	}
+}
+
+func (vm *VM) executeInner(chunk *core.Chunk) error {
 	for vm.ip < len(chunk.Code) {
 		inst := chunk.Code[vm.ip]
 		line := 0
@@ -121,7 +168,7 @@ func (vm *VM) execute(chunk *core.Chunk) error {
 			case string:
 				vm.push(core.StringVal(v))
 			case *core.CompiledFn:
-				vm.push(core.FnVal(v))
+				vm.push(core.FnVal(&core.Closure{Fn: v, Env: make(map[string]core.Value)}))
 			case core.StructDef:
 				vm.push(core.Value{core.ValStructDef, v})
 			case core.ClassDef:
@@ -236,11 +283,13 @@ func (vm *VM) execute(chunk *core.Chunk) error {
 
 		case core.OpGetGlobal:
 			name := chunk.Constants[inst.Operand].(string)
-			val, ok := vm.globals[name]
-			if !ok {
-				return vm.runtimeErr("E300", line, col, "unknown %s", name)
+			if err := varhandler.OpGetGlobal(vm, name, line, col); err != nil {
+				// varhandler returns E301 for not found, but tests expect E300 "unknown x"
+				if err.Error()[:4] == "E301" {
+					return vm.runtimeErr("E300", line, col, "unknown %s", name)
+				}
+				return err
 			}
-			vm.push(val)
 
 		case core.OpSetGlobal:
 			name := chunk.Constants[inst.Operand].(string)
@@ -356,11 +405,68 @@ func (vm *VM) execute(chunk *core.Chunk) error {
 		case core.OpGetLoopCounter:
 			// handled via locals
 
-		case core.OpAsync:
-			// simplified: just execute normally for now
+		case core.OpAsyncCall:
+			argCount := inst.Operand
+			workers := inst.Operand2
+
+			args := make([]core.Value, argCount)
+			for i := argCount - 1; i >= 0; i-- {
+				args[i] = vm.pop()
+			}
+			callee := vm.pop()
+
+			if callee.Type != core.ValFn {
+				return vm.runtimeErr("E300", line, col, "want fn for async call")
+			}
+			closureVal := callee.Data.(*core.Closure)
+			fnVal := closureVal.Fn
+
+			if !fnVal.IsAsync {
+				return vm.runtimeErr("E300", line, col, "cannot mul a non-async fn")
+			}
+
+			vm.poolMutex.Lock()
+			pool, exists := vm.asyncPools[fnVal]
+			if !exists {
+				pool = make(chan asyncTask, 1000) // generous buffer
+				vm.asyncPools[fnVal] = pool
+
+				// Spawn workers
+				for i := 0; i < workers; i++ {
+					go func(ch chan asyncTask) {
+						for task := range ch {
+							// ponytail: clone VM, reuse globals (inherits known race condition bug #2 for now)
+							execVM := &VM{
+								chunk:      vm.chunk,
+								fns:        vm.fns,
+								globals:    vm.globals,
+								stack:      make([]core.Value, 4096),
+								sp:         0,
+								ip:         0,
+								asyncPools: vm.asyncPools, // share pools for nested calls
+							}
+
+							execVM.push(core.Value{Type: core.ValFn, Data: &core.Closure{Fn: task.fn, Env: make(map[string]core.Value)}})
+							for _, a := range task.args {
+								execVM.push(a)
+							}
+							
+							// CallFunction internally sets up the frame and calls vm.execute()
+							execVM.CallFunction(task.fn, len(task.args))
+							
+							vm.asyncWg.Done()
+						}
+					}(pool)
+				}
+			}
+			vm.poolMutex.Unlock()
+
+			vm.asyncWg.Add(1)
+			pool <- asyncTask{fn: fnVal, args: args}
 
 		case core.OpAwait:
-			// simplified: value is already on stack
+			vm.asyncWg.Wait()
+			// ponytail: awt returns void for now (doesn't push a promise result)
 		}
 	}
 
@@ -552,18 +658,27 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		result = arr[len(arr)-1]
 
 	case core.BuiltinRm:
-		if len(args) != 2 || args[0].Type != core.ValArray || args[1].Type != core.ValNumber {
-			return vm.runtimeErr("E300", line, col, "want array, number")
+		if len(args) == 1 && args[0].Type == core.ValString {
+			// File removal
+			err := os.Remove(args[0].Data.(string))
+			if err != nil {
+				return vm.runtimeErr("E300", line, col, "rm fail: %v", err)
+			}
+			result = core.BoolVal(true)
+		} else if len(args) == 2 && args[0].Type == core.ValArray && args[1].Type == core.ValNumber {
+			// Array removal
+			arr := args[0].Data.([]core.Value)
+			idx := int(args[1].Data.(float64))
+			if idx < 0 || idx >= len(arr) {
+				return vm.runtimeErr("E300", line, col, "bounds %d", idx)
+			}
+			newArr := make([]core.Value, 0, len(arr)-1)
+			newArr = append(newArr, arr[:idx]...)
+			newArr = append(newArr, arr[idx+1:]...)
+			result = core.ArrayVal(newArr)
+		} else {
+			return vm.runtimeErr("E300", line, col, "want array, number or filename string")
 		}
-		arr := args[0].Data.([]core.Value)
-		idx := int(args[1].Data.(float64))
-		if idx < 0 || idx >= len(arr) {
-			return vm.runtimeErr("E300", line, col, "bounds %d", idx)
-		}
-		newArr := make([]core.Value, 0, len(arr)-1)
-		newArr = append(newArr, arr[:idx]...)
-		newArr = append(newArr, arr[idx+1:]...)
-		result = core.ArrayVal(newArr)
 
 	case core.BuiltinKey:
 		if len(args) != 1 || args[0].Type != core.ValMap {
@@ -697,14 +812,14 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 			savedIP := execVM.ip
 			savedChunk := execVM.chunk
 
-			execVM.push(core.FnVal(handlerFn))
+			execVM.push(core.FnVal(&core.Closure{Fn: handlerFn, Env: make(map[string]core.Value)}))
 			execVM.push(core.Value{core.ValMap, reqMap})
 
 			frame := callFrame{
-				fn:    handlerFn,
-				ip:    execVM.ip,
-				bp:    execVM.sp - 1, // 1 argument
-				chunk: execVM.chunk,
+				closure: &core.Closure{Fn: handlerFn, Env: make(map[string]core.Value)},
+				ip:    0,
+				bp:    execVM.sp - 1, // args
+				chunk: handlerFn.Chunk,
 			}
 			execVM.frames = append(execVM.frames, frame)
 
@@ -852,38 +967,33 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		result = core.Value{core.ValMap, m}
 
 	case core.BuiltinReq:
-		if len(args) < 1 || args[0].Type != core.ValString {
-			return vm.runtimeErr("E300", line, col, "want url string")
-		}
-		reqURL := args[0].Data.(string)
-		req, err := http.NewRequest("GET", reqURL, nil)
+		res, err := iohandler.BuiltinReq(vm, args, line, col)
 		if err != nil {
-			return vm.runtimeErr("E300", line, col, "req fail: %v", err)
+			return err
 		}
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return vm.runtimeErr("E300", line, col, "req fail: %v", err)
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return vm.runtimeErr("E300", line, col, "read fail: %v", err)
-		}
-		result = core.StringVal(string(body))
+		result = res
 
 	case core.BuiltinJson:
-		if len(args) != 1 || args[0].Type != core.ValString {
-			return vm.runtimeErr("E300", line, col, "want json string")
+		if len(args) != 1 {
+			return vm.runtimeErr("E300", line, col, "want 1 arg for json")
 		}
-		// Simple JSON parser: converts JSON string to dryLang map/array
-		jsonStr := args[0].Data.(string)
-		parsed, err := parseJSON(jsonStr)
-		if err != nil {
-			return vm.runtimeErr("E300", line, col, "json parse fail: %v", err)
+		if args[0].Type == core.ValString {
+			// Simple JSON parser: converts JSON string to dryLang map/array
+			jsonStr := args[0].Data.(string)
+			parsed, err := parseJSON(jsonStr)
+			if err != nil {
+				return vm.runtimeErr("E300", line, col, "json parse fail: %v", err)
+			}
+			result = parsed
+		} else {
+			// Stringify
+			iVal := valueToInterface(args[0])
+			b, err := json.Marshal(iVal)
+			if err != nil {
+				return vm.runtimeErr("E300", line, col, "json stringify fail: %v", err)
+			}
+			result = core.StringVal(string(b))
 		}
-		result = parsed
 
 	case core.BuiltinArg:
 		osArgs := os.Args
@@ -961,39 +1071,11 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		result = core.UnknownValue // unreachable
 
 	case core.BuiltinMath:
-		if len(args) < 2 || args[0].Type != core.ValString {
-			return vm.runtimeErr("E300", line, col, "want math(op, ...numbers)")
+		res, err := mathhandler.BuiltinMath(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, err.Error())
 		}
-		op := args[0].Data.(string)
-		if args[1].Type != core.ValNumber {
-			return vm.runtimeErr("E300", line, col, "want number")
-		}
-		a := args[1].Data.(float64)
-		switch op {
-		case "sqrt":
-			result = core.NumberVal(math.Sqrt(a))
-		case "pow":
-			if len(args) < 3 || args[2].Type != core.ValNumber {
-				return vm.runtimeErr("E300", line, col, "pow wants 2 numbers")
-			}
-			result = core.NumberVal(math.Pow(a, args[2].Data.(float64)))
-		case "ceil":
-			result = core.NumberVal(math.Ceil(a))
-		case "floor":
-			result = core.NumberVal(math.Floor(a))
-		case "sin":
-			result = core.NumberVal(math.Sin(a))
-		case "cos":
-			result = core.NumberVal(math.Cos(a))
-		case "tan":
-			result = core.NumberVal(math.Tan(a))
-		case "log":
-			result = core.NumberVal(math.Log(a))
-		case "log10":
-			result = core.NumberVal(math.Log10(a))
-		default:
-			return vm.runtimeErr("E300", line, col, "unknown math op: %s", op)
-		}
+		result = res
 
 	case core.BuiltinPt:
 		var strs []string
@@ -1077,6 +1159,42 @@ func jsonToValue(v interface{}) core.Value {
 	return core.UnknownValue
 }
 
+func valueToInterface(v core.Value) interface{} {
+	switch v.Type {
+	case core.ValNumber:
+		return v.Data.(float64)
+	case core.ValString:
+		return v.Data.(string)
+	case core.ValBool:
+		return v.Data.(bool)
+	case core.ValArray:
+		arr := v.Data.([]core.Value)
+		iArr := make([]interface{}, len(arr))
+		for i, item := range arr {
+			iArr[i] = valueToInterface(item)
+		}
+		return iArr
+	case core.ValMap:
+		m := v.Data.(map[string]core.Value)
+		iMap := make(map[string]interface{}, len(m))
+		for k, item := range m {
+			iMap[k] = valueToInterface(item)
+		}
+		return iMap
+	case core.ValUnknown:
+		return nil
+	}
+	return nil
+}
+
+
+func (vm *VM) GetCurrentClosure() *core.Closure {
+	if len(vm.frames) == 0 {
+		return nil
+	}
+	return vm.frames[len(vm.frames)-1].closure
+}
+
 func (vm *VM) callOp(argCount, line, col int) error {
 	chunk := vm.chunk
 	callee := vm.stack[vm.sp-argCount-1]
@@ -1121,7 +1239,10 @@ func (vm *VM) callOp(argCount, line, col int) error {
 			vm.stack[vm.sp-argCount-1] = core.Value{Type: core.ValInstance, Data: inst}
 
 			frame := callFrame{
-				fn:    &core.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount},
+				closure: &core.Closure{
+					Fn: &core.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount},
+					Env: make(map[string]core.Value),
+				},
 				ip:    vm.ip,
 				bp:    vm.sp - argCount - 1,
 				chunk: chunk,
@@ -1162,10 +1283,11 @@ func (vm *VM) callOp(argCount, line, col int) error {
 		bound := callee.Data.(*core.BoundMethod)
 		vm.stack[vm.sp-argCount-1] = core.Value{Type: core.ValInstance, Data: bound.Instance}
 
-		fn := &core.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount}
-
 		frame := callFrame{
-			fn:    fn,
+			closure: &core.Closure{
+				Fn: &core.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount},
+				Env: make(map[string]core.Value),
+			},
 			ip:    vm.ip,
 			bp:    vm.sp - argCount - 1,
 			chunk: chunk,
@@ -1202,13 +1324,14 @@ func (vm *VM) callOp(argCount, line, col int) error {
 		return vm.runtimeErr("E300", line, col, "want fn")
 	}
 
-	fn := callee.Data.(*core.CompiledFn)
+	closure := callee.Data.(*core.Closure)
+	fn := closure.Fn
 	if argCount != fn.ParamCount {
 		return vm.runtimeErr("E300", line, col, "want %d args", fn.ParamCount)
 	}
 
 	frame := callFrame{
-		fn:    fn,
+		closure: closure,
 		ip:    vm.ip,
 		bp:    vm.sp - argCount,
 		chunk: chunk,
@@ -1223,19 +1346,6 @@ func (vm *VM) callOp(argCount, line, col int) error {
 	savedChunk := chunk
 	err := vm.execute(fn.Chunk)
 	if err != nil {
-		if len(vm.tryStack) > 0 {
-			tf := vm.tryStack[len(vm.tryStack)-1]
-			vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
-			vm.sp = tf.sp
-			vm.push(core.StringVal(err.Error()))
-			vm.ip = tf.catchIP
-			chunk = savedChunk
-			vm.chunk = chunk
-			for len(vm.frames) > tf.frameDepth {
-				vm.frames = vm.frames[:len(vm.frames)-1]
-			}
-			return nil
-		}
 		return err
 	}
 

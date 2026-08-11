@@ -1,0 +1,229 @@
+=== DryLang Test Results ===
+
+[PASS] easy_01.y
+       Output: 71
+
+[PASS] easy_02.y
+       Output: 180
+
+[PASS] easy_03.y
+       Output: f
+
+[PASS] easy_04.y
+       Output: 70
+
+[PASS] easy_05.y
+       Output: 9
+
+[PASS] easy_06.y
+       Output: t
+
+[PASS] easy_07.y
+       Output: t
+
+[PASS] easy_08.y
+       Output: t
+
+[PASS] easy_09.y
+       Output: f
+
+[PASS] easy_10.y
+       Output: f
+
+[PASS] easy_11.y
+       Output: t
+
+[PASS] easy_12.y
+       Output: hello world
+
+[PASS] easy_13.y
+       Output: 2
+
+[PASS] easy_14.y
+       Output: 2
+
+[PASS] easy_15.y
+       Output: number
+
+[PASS] easy_16.y
+       Output: big
+
+[PASS] easy_17.y
+       Output: 10
+
+[PASS] easy_18.y
+       Output: 15
+
+[PASS] easy_19.y
+       Output: -9223372036854775808
+
+[PASS] easy_20.y
+       Output: {a: 1}
+
+[PASS] hard_01.y
+       Output: -9223372036854775808 | -9223372036854775808 | -9223372036854775808 | 0
+
+[PASS] hard_02.y
+       Output: 10
+
+[PASS] hard_03.y
+       Output: 16
+
+[PASS] hard_04.y
+       Output: foo
+
+[PASS] hard_05.y
+       Output: 42
+
+[PASS] hard_06.y
+       Output: t
+
+[PASS] hard_07.y
+       Output: Zaky
+
+[PASS] hard_08.y
+       Output: t
+
+[PASS] hard_09.y
+       Output: map
+
+[PASS] hard_10.y
+       Output: f
+
+[PASS] hard_11.y
+       Output: t
+
+[PASS] hard_12.y
+       Output: 20
+
+[PASS] hard_13.y
+       Output: -9223372036854775808
+
+[PASS] hard_14.y
+       Output: 10
+
+[PASS] hard_15.y
+       Output: 11
+
+[PASS] hard_16.y
+       Output: called | f
+
+[PASS] hard_17.y
+       Output: called | f
+
+[PASS] hard_18.y
+       Output: 3
+
+[PASS] hard_19.y
+       Output: string
+
+[PASS] hard_20.y
+       Output: f
+
+[PASS] king_01.y
+       Output: 30
+
+[PASS] king_02.y
+       Output: DONE
+
+[PASS] king_03.y
+       Output: 150
+
+[PASS] king_04.y
+       Output: 6
+
+[PASS] king_05.y
+       Output: 200
+
+[PASS] king_06.y
+       Output: Received: Hello World
+
+[PASS] king_07.y
+       Output: 120
+
+[PASS] king_08.y
+       Output: 3
+
+[PASS] king_09.y
+       Output: 1
+
+[PASS] king_10.y
+       Output: Failed request
+
+[PASS] king_11.y
+       Output: f
+
+[PASS] king_12.y
+       Output: t
+
+[PASS] king_13.y
+       Output: 42
+
+[PASS] king_14.y
+       Output: SUCCESS
+
+[PASS] king_15.y
+       Output: 500
+
+[PASS] medium_01.y
+       Output: 2
+
+[PASS] medium_02.y
+       Output: 9
+
+[PASS] medium_03.y
+       Output: 10
+
+[PASS] medium_04.y
+       Output: 13
+
+[PASS] medium_05.y
+       Output: 8
+
+[PASS] medium_06.y
+       Output: 2
+
+[PASS] medium_07.y
+       Output: 99
+
+[PASS] medium_08.y
+       Output: 15
+
+[PASS] medium_09.y
+       Output: [b, a]
+
+[PASS] medium_10.y
+       Output: [1, 2]
+
+[PASS] medium_11.y
+       Output: t
+
+[PASS] medium_12.y
+       Output: [a, b, c]
+
+[PASS] medium_13.y
+       Output: heyyo
+
+[PASS] medium_14.y
+       Output: 8
+
+[PASS] medium_15.y
+       Output: 4
+
+[PASS] medium_16.y
+       Output: map
+
+[PASS] medium_17.y
+       Output: string
+
+[PASS] medium_18.y
+       Output: array
+
+[PASS] medium_19.y
+       Output: f
+
+[PASS] medium_20.y
+       Output: E300 at 5:20: req fail: Get "GET": unsupported protocol scheme ""
+
+=== Summary ===
+Total: 75 | Passed: 75 | Failed: 0

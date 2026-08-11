@@ -66,8 +66,6 @@ func ParsePrefix(p core.ParserCore) (ast.Expr, error) {
 		return &ast.UnaryExpr{Op: tok.Type, Operand: operand, Line: tok.Line, Col: tok.Col}, nil
 	case lexer.TOKEN_ARROW:
 		return functionhandler.ParseArrowFn(p)
-	case lexer.TOKEN_AWT:
-		return functionhandler.ParseAwt(p)
 	default:
 		return nil, p.Errorf("E109", "illegal token %s in prefix", p.Current().Literal)
 	}

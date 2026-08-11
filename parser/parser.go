@@ -166,6 +166,12 @@ func (p *Parser) ParseStatement() (ast.Stmt, error) {
 		return loophandler.ParseDone(p)
 	case lexer.TOKEN_CON:
 		return loophandler.ParseCon(p)
+	case lexer.TOKEN_MUL:
+		return functionhandler.ParseMulCall(p)
+	case lexer.TOKEN_UNI:
+		return functionhandler.ParseUniCall(p)
+	case lexer.TOKEN_AWT:
+		return functionhandler.ParseAwt(p)
 	case lexer.TOKEN_TRY:
 		return errorhandler.ParseTry(p)
 	case lexer.TOKEN_ERR:

@@ -37,6 +37,8 @@ const (
 	TOKEN_USE     // use
 	TOKEN_CL      // cl
 	TOKEN_UNKNOWN // unknown
+	TOKEN_MUL     // mul
+	TOKEN_UNI     // uni
 
 	// Operators (1-char)
 	TOKEN_ASSIGN    // =
@@ -104,6 +106,8 @@ var tokenNames = map[TokenType]string{
 	TOKEN_USE:          "use",
 	TOKEN_CL:           "cl",
 	TOKEN_UNKNOWN:      "unknown",
+	TOKEN_MUL:          "mul",
+	TOKEN_UNI:          "uni",
 	TOKEN_ASSIGN:       "=",
 	TOKEN_PLUS:         "+",
 	TOKEN_MINUS:        "-",
@@ -172,6 +176,8 @@ var keywords = map[string]TokenType{
 	"use":     TOKEN_USE,
 	"cl":      TOKEN_CL,
 	"unknown": TOKEN_UNKNOWN,
+	"mul":     TOKEN_MUL,
+	"uni":     TOKEN_UNI,
 }
 
 // LookupIdent checks if an identifier is a keyword.

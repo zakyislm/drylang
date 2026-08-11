@@ -54,7 +54,12 @@ export const DOCS_STRUCTURE: DocGroup[] = [
     group: 'Data Structures',
     items: [
       { title: 'Overview', slug: 'data-structures' },
-      { title: 'Structs & Classes', slug: 'data-structures/structs' },
+      { title: 'Structs', slug: 'data-structures/structs' },
+      { title: 'Classes', slug: 'data-structures/classes' },
+      { title: 'Inheritance', slug: 'data-structures/inheritance' },
+      { title: 'Private Members', slug: 'data-structures/private-members' },
+      { title: 'Arrays', slug: 'data-structures/arrays' },
+      { title: 'Maps', slug: 'data-structures/maps' },
     ],
   }
 ];

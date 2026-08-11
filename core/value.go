@@ -36,7 +36,12 @@ func StringVal(v string) Value        { return Value{ValString, v} }
 func BoolVal(v bool) Value            { return Value{ValBool, v} }
 func ArrayVal(v []Value) Value        { return Value{ValArray, v} }
 func MapVal(v map[string]Value) Value { return Value{ValMap, v} }
-func FnVal(v *CompiledFn) Value       { return Value{ValFn, v} }
+type Closure struct {
+	Fn  *CompiledFn
+	Env map[string]Value
+}
+
+func FnVal(v *Closure) Value       { return Value{ValFn, v} }
 
 func (v Value) String() string {
 	switch v.Type {
@@ -68,8 +73,8 @@ func (v Value) String() string {
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case ValFn:
-		fn := v.Data.(*CompiledFn)
-		return fmt.Sprintf("<fn %s>", fn.Name)
+		c := v.Data.(*Closure)
+		return fmt.Sprintf("<fn %s>", c.Fn.Name)
 	case ValStructDef:
 		sd := v.Data.(StructDef)
 		return fmt.Sprintf("<struct %s>", sd.Name)

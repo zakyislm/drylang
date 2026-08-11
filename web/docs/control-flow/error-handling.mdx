@@ -2,14 +2,22 @@
 
 DryLang uses `try` and `err` blocks to handle errors gracefully.
 
-## Try / Err
-The `err` block catches any error from the `try` block. The error message is injected into the specified variable.
+## Try / Catch (`err`)
+The `err(e)` block catches any error from the `try` block. The error message is injected into the specified variable.
 ```rust
 try {
     content = r("fake_file.txt")
-} err e {
+} err(e) {
     pt("Caught: " + e)
 }
 
 pt("Program continues safely.")
+```
+
+## Throwing Errors
+Use the `err` keyword followed by an expression to throw a runtime error.
+```rust
+if p.stock = 0 {
+    err "Product out of stock!"
+}
 ```

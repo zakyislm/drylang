@@ -36,16 +36,16 @@ export function VcomEditor({ code, onChange }: VcomEditorProps) {
     // Define syntax highlighter rules
     monaco.languages.setMonarchTokensProvider('drylang', {
       keywords: [
-        'fn', 'rev', 'if', 'el', 'elif', 'pt', 'lp', 'br', 'con', 'err', 'try', 'cns', 'on', 'done', 'asn', 'awt', 'pv', 'use', 'unknown', 'in', 't', 'f'
+        'fn', 'if', 'el', 'elif', 'lp', 'cns', 'rev', 'done', 'con', 'on', 'asn', 'awt', 'try', 'err', 'pv', 'use', 'unknown', 'mul', 'uni', 't', 'f'
       ],
       operators: [
-        '=', '>', '<', '==', '<=', '>=', '!=', '+', '-', '*', '/', '%'
+        '=', '>', '<', '<=', '>=', '!=', '+', '-', '*', '/', '%'
       ],
       tokenizer: {
         root: [
-          // Comments: . comment .
-          [/^\s*\..*\.\s*$/, 'comment'],
-          [/\..*\./, 'comment'],
+          // Comments
+          [/\/\/.*/, 'comment'],
+          [/\/\*[\s\S]*?\*\//, 'comment'],
           
           // Keywords
           [/[a-zA-Z_]\w*/, {
@@ -140,14 +140,14 @@ export function VcomEditor({ code, onChange }: VcomEditorProps) {
             range: undefined as any
           },
           // Keywords (excluding the ones we made snippets for)
-          ...['rev', 'el', 'elif', 'pt', 'br', 'con', 'err', 'try', 'cns', 'use', 'on', 'done', 'asn', 'awt', 'pv', 'in'].map(k => ({
+          ...['rev', 'el', 'elif', 'con', 'err', 'try', 'cns', 'use', 'on', 'done', 'asn', 'awt', 'pv', 'unknown', 'mul', 'uni', 't', 'f'].map(k => ({
             label: k,
             kind: monaco.languages.CompletionItemKind.Keyword,
             insertText: k,
             range: undefined as any
           })),
           // Built-ins
-          ...['len', 'get', 'add', 'num', 'str', 'abs', 'min', 'max', 'rnd', 'cap', 'low', 'trm', 'spl', 'j', 'mod', 'has', 'sort', 'pop', 'rm', 'key', 'val', 'ran', 'q'].map(b => ({
+          ...['len', 'get', 'add', 'num', 'str', 'abs', 'min', 'max', 'rnd', 'cap', 'low', 'trm', 'spl', 'j', 'mod', 'has', 'sort', 'pop', 'rm', 'key', 'val', 'ran', 'q', 'r', 'w', 'now', 'date', 'req', 'json', 'arg', 'env', 'cmd', 'dir', 'del', 'die', 'op', 'db', 'math', 'in', 'pt', 'cl'].map(b => ({
             label: b,
             kind: monaco.languages.CompletionItemKind.Function,
             insertText: b + '($1)',

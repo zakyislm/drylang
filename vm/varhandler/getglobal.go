@@ -5,6 +5,12 @@ import (
 )
 
 func OpGetGlobal(vm core.VMCore, name string, line, col int) error {
+	if closure := vm.GetCurrentClosure(); closure != nil {
+		if val, ok := closure.Env[name]; ok {
+			vm.Push(val)
+			return nil
+		}
+	}
 	if val, ok := vm.GetGlobal(name); ok {
 		vm.Push(val)
 		return nil

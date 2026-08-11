@@ -1,10 +1,11 @@
 package main
 
 import (
+	"drylang/analyzer"
+	"drylang/ast"
 	"drylang/compiler"
 	"drylang/errfmt"
 	"drylang/lexer"
-	"drylang/ast"
 	"drylang/parser"
 	"drylang/vm"
 	"embed"
@@ -27,7 +28,7 @@ func main() {
 	// Attempt to load .env file from the current directory, ignoring errors if it doesn't exist.
 	_ = godotenv.Load()
 	if len(os.Args) < 2 {
-		fmt.Println("REPL not implemented")
+		runREPL()
 		os.Exit(0)
 	}
 
@@ -57,12 +58,12 @@ func main() {
 			die(err)
 		}
 		for _, e := range entries {
-			if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".dry")) {
+			if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".y")) {
 				files = append(files, e.Name())
 			}
 		}
 		if len(files) == 0 {
-			fmt.Println("0:0 no .dry files")
+			fmt.Println("0:0 no .dry or .y files")
 			os.Exit(1)
 		}
 	} else if strings.Contains(target, ",") {
@@ -83,7 +84,7 @@ func main() {
 					die(err)
 				}
 				for _, e := range entries {
-					if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".dry")) {
+					if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dry") || strings.HasSuffix(e.Name(), ".y")) {
 						files = append(files, filepath.Join(target, e.Name()))
 					}
 				}
@@ -225,15 +226,16 @@ func (l *loader) loadAndParse(target string, baseDir string) (*ast.Program, erro
 }
 
 func runAST(prog *ast.Program) error {
+	if err := analyzer.Analyze(prog); err != nil {
+		return err
+	}
+
 	comp := compiler.New()
 	chunk, fns, err := comp.Compile(prog)
 	if err != nil {
 		return err
 	}
-	
-	for i, inst := range chunk.Code {
-		fmt.Printf("%04d %v %v\n", i, inst.Op, inst.Operand)
-	}
+
 
 	machine := vm.New(chunk, fns)
 	if err := machine.Run(); err != nil {
@@ -263,10 +265,7 @@ func run(source string) error {
 	if err != nil {
 		return err
 	}
-	
-	for i, inst := range chunk.Code {
-		fmt.Printf("%04d %v %v\n", i, inst.Op, inst.Operand)
-	}
+
 
 	machine := vm.New(chunk, fns)
 	if err := machine.Run(); err != nil {
@@ -282,7 +281,7 @@ func die(err error) {
 }
 
 func printHelp() {
-	fmt.Println(`dryLang - Writeless, get more.
+	fmt.Print(`dryLang - Writeless, get more.
 
 Usage:
   dry [file|folder|url|github_repo]
