@@ -1073,7 +1073,7 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 	case core.BuiltinMath:
 		res, err := mathhandler.BuiltinMath(vm, args, line, col)
 		if err != nil {
-			return vm.runtimeErr("E300", line, col, err.Error())
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
 		}
 		result = res
 
