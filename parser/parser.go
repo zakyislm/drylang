@@ -13,6 +13,7 @@ import (
 	"drylang/parser/functionhandler"
 	"drylang/parser/loophandler"
 	"drylang/parser/modhandler"
+	"drylang/parser/structhandler"
 	"drylang/parser/typehandler"
 	"drylang/parser/varhandler"
 	"drylang/parser/exprhandler"
@@ -165,6 +166,12 @@ func (p *Parser) ParseStatement() (ast.Stmt, error) {
 		return loophandler.ParseDone(p)
 	case lexer.TOKEN_CON:
 		return loophandler.ParseCon(p)
+	case lexer.TOKEN_MUL:
+		return functionhandler.ParseMulCall(p)
+	case lexer.TOKEN_UNI:
+		return functionhandler.ParseUniCall(p)
+	case lexer.TOKEN_AWT:
+		return functionhandler.ParseAwt(p)
 	case lexer.TOKEN_TRY:
 		return errorhandler.ParseTry(p)
 	case lexer.TOKEN_ERR:
@@ -177,6 +184,11 @@ func (p *Parser) ParseStatement() (ast.Stmt, error) {
 		return classhandler.ParseClass(p)
 	case lexer.TOKEN_QUESTION:
 		return typehandler.ParseUnknownBool(p)
+	case lexer.TOKEN_IDENT:
+		if p.Peek().Type == lexer.TOKEN_LBRACE {
+			return structhandler.ParseStruct(p)
+		}
+		fallthrough
 	default:
 		return p.ParseExpressionOrAssign()
 	}

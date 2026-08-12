@@ -5,11 +5,7 @@ import (
 	"drylang/core"
 )
 
-func ParseAwt(p core.ParserCore) (ast.Expr, error) {
+func ParseAwt(p core.ParserCore) (ast.Stmt, error) {
 	tok := p.Advance() // Consume 'awt'
-	val, err := p.ParseExpression(core.PREC_UNARY)
-	if err != nil {
-		return nil, err
-	}
-	return &ast.AwaitExpr{Value: val, Line: tok.Line, Col: tok.Col}, nil
+	return &ast.AwaitStmt{Line: tok.Line, Col: tok.Col}, nil
 }

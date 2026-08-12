@@ -11,6 +11,19 @@ func OpDotGet(vm core.VMCore, line, col int, fieldName string, optional bool) er
 		return nil
 	}
 	
+	if obj.Type == core.ValStructInstance {
+		fields := obj.Data.(map[string]core.Value)
+		if val, ok := fields[fieldName]; ok {
+			vm.Push(val)
+			return nil
+		}
+		if optional {
+			vm.Push(core.Value{Type: core.ValUnknown})
+			return nil
+		}
+		return vm.Errorf("E303 at %d:%d: undefined property: %s", line, col, fieldName)
+	}
+
 	if obj.Type != core.ValInstance {
 		if optional {
 			vm.Push(core.Value{Type: core.ValUnknown})

@@ -7,11 +7,17 @@ import (
 func OpIndex(vm core.VMCore, line, col int) error {
 	idx, obj := vm.Pop(), vm.Pop()
 	if obj.Type == core.ValArray {
-		if idx.Type != core.ValNumber {
+
+		arr := obj.Data.([]core.Value)
+		var i int
+		switch v := idx.Data.(type) {
+		case float64:
+			i = int(v)
+		case int:
+			i = v
+		default:
 			return vm.Errorf("E302 at %d:%d: array index must be number", line, col)
 		}
-		arr := obj.Data.([]core.Value)
-		i := int(idx.Data.(float64))
 		if i < 0 || i >= len(arr) {
 			return vm.Errorf("E302 at %d:%d: array index out of bounds", line, col)
 		}
@@ -25,11 +31,17 @@ func OpIndex(vm core.VMCore, line, col int) error {
 			vm.Push(core.UnknownValue)
 		}
 	} else if obj.Type == core.ValString {
-		if idx.Type != core.ValNumber {
+
+		s := obj.Data.(string)
+		var i int
+		switch v := idx.Data.(type) {
+		case float64:
+			i = int(v)
+		case int:
+			i = v
+		default:
 			return vm.Errorf("E302 at %d:%d: string index must be number", line, col)
 		}
-		s := obj.Data.(string)
-		i := int(idx.Data.(float64))
 		if i < 0 || i >= len(s) {
 			return vm.Errorf("E302 at %d:%d: string index out of bounds", line, col)
 		}

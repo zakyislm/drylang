@@ -1,4 +1,4 @@
-# Structs & Classes
+# Structs
 
 ## Structs
 Declare a struct by name followed by fields in braces. No `struct` keyword needed.
@@ -14,44 +14,8 @@ Instantiate like a function call — no `new` keyword:
 p = User("Zaky", 25)
 pt(p.name) // "Zaky"
 pt(p.age)  // 25
+p.age = 26 // Property assignment is fully supported!
 ```
+*Note: Dot notation (`obj.property`) is only available for Structs and Classes. For Maps, use bracket notation `obj["property"]`.*
 
-## Classes
-Use `cl` to define a class with fields and methods. Methods use `fn`.
-```rust
-cl Calculator {
-    fn add(a, b) {
-        rev a + b
-    }
-}
 
-calc = Calculator()
-pt(calc.add(100, 50)) // 150
-```
-
-## Inheritance
-Classes can extend other classes using `<-`.
-```rust
-cl Animal {
-    name
-    fn speak() {
-        rev "..."
-    }
-}
-
-cl Dog <- Animal {
-    fn speak() {
-        rev "Woof!"
-    }
-}
-```
-
-## Private Members
-Use `pv` to mark fields or methods as private.
-```rust
-pv cl Internal {
-    fn secret() {
-        rev "hidden"
-    }
-}
-```

@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -15,8 +17,8 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-//go:embed y.exe
-var yBinary []byte
+//go:embed dry.exe
+var dryBinary []byte
 
 func main() {
 	fmt.Println("=====================================")
@@ -32,7 +34,7 @@ func main() {
 	}
 
 	installDir := filepath.Join(userProfile, ".drylang", "bin")
-	binPath := filepath.Join(installDir, "y.exe")
+	binPath := filepath.Join(installDir, "dry.exe")
 
 	fmt.Printf("[*] Creating directory: %s\n", installDir)
 	err = os.MkdirAll(installDir, 0755)
@@ -42,8 +44,8 @@ func main() {
 		return
 	}
 
-	fmt.Println("[*] Extracting y.exe...")
-	err = os.WriteFile(binPath, yBinary, 0755)
+	fmt.Println("[*] Extracting dry.exe...")
+	err = os.WriteFile(binPath, dryBinary, 0755)
 	if err != nil {
 		fmt.Printf("Error extracting binary: %v\n", err)
 		waitForExit()
@@ -64,7 +66,7 @@ func main() {
 	fmt.Println("       INSTALLATION SUCCESSFUL       ")
 	fmt.Println("=====================================")
 	fmt.Println("Please restart your terminal/command prompt.")
-	fmt.Println("Then type 'y' to start using dryLang.")
+	fmt.Println("Then type 'dry' to start using dryLang.")
 	fmt.Println()
 	
 	waitForExit()

@@ -6,18 +6,54 @@ import (
 )
 
 func BuiltinJson(vm core.VMCore, args []core.Value, line, col int) (core.Value, error) {
-	var result core.Value
-	if len(args) != 1 || args[0].Type != core.ValString {
-		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"want json string", line, col)
+	if len(args) != 1 {
+		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"want 1 arg", line, col)
 	}
-	// Simple JSON parser: converts JSON string to dryLang map/array
-	jsonStr := args[0].Data.(string)
-	parsed, err := parseJSON(jsonStr)
+
+	if args[0].Type == core.ValString {
+		// Parse JSON string
+		jsonStr := args[0].Data.(string)
+		parsed, err := parseJSON(jsonStr)
+		if err != nil {
+			return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"json parse fail: %v", err, line, col)
+		}
+		return parsed, nil
+	}
+
+	// Stringify to JSON
+	raw := valueToInterface(args[0])
+	bytes, err := json.Marshal(raw)
 	if err != nil {
-		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"json parse fail: %v", err, line, col)
+		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"json stringify fail: %v", err, line, col)
 	}
-	result = parsed
-	return result, nil
+	return core.StringVal(string(bytes)), nil
+}
+
+func valueToInterface(v core.Value) interface{} {
+	switch v.Type {
+	case core.ValNumber:
+		return v.Data.(float64)
+	case core.ValString:
+		return v.Data.(string)
+	case core.ValBool:
+		return v.Data.(bool)
+	case core.ValArray:
+		arr := v.Data.([]core.Value)
+		res := make([]interface{}, len(arr))
+		for i, item := range arr {
+			res[i] = valueToInterface(item)
+		}
+		return res
+	case core.ValMap:
+		m := v.Data.(map[string]core.Value)
+		res := make(map[string]interface{}, len(m))
+		for k, item := range m {
+			res[k] = valueToInterface(item)
+		}
+		return res
+	default:
+		return nil
+	}
 }
 
 func parseJSON(input string) (core.Value, error) {

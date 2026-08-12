@@ -26,6 +26,6 @@ jobs:
     - name: Run Script Tests
       run: |
         go build -o dry .
-        for file in tests/*.dry; do
+        for file in test/*.y; do
           ./dry "$file"
         done

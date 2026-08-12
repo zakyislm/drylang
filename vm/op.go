@@ -87,11 +87,11 @@ func BuiltinOp(vm *VM, args []core.Value, line, col int) (core.Value, error) {
 		savedIP := execVM.ip
 		savedChunk := execVM.chunk
 
-		execVM.push(core.FnVal(handlerFn))
+		execVM.push(core.FnVal(&core.Closure{Fn: handlerFn, Env: make(map[string]core.Value)}))
 		execVM.push(core.Value{core.ValMap, reqMap})
 
 		frame := callFrame{
-			fn:    handlerFn,
+			closure: &core.Closure{Fn: handlerFn, Env: make(map[string]core.Value)},
 			ip:    execVM.ip,
 			bp:    execVM.sp - 1, // 1 argument
 			chunk: execVM.chunk,

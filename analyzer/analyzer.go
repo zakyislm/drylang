@@ -76,8 +76,11 @@ func (a *analyzer) analyzeStmt(stmt ast.Stmt) error {
 		a.declare(s.Name, s.Line, s.Col, false, false)
 		return nil
 
-	case *ast.PrintStmt:
-		return a.analyzeExpr(s.Value)
+	case *ast.AwaitStmt:
+		return nil
+
+	case *ast.MulCallStmt:
+		return a.analyzeExpr(s.Call)
 
 	case *ast.ExprStmt:
 		return a.analyzeExpr(s.Expression)
@@ -263,22 +266,7 @@ func (a *analyzer) analyzeExpr(expr ast.Expr) error {
 				return err
 			}
 		}
-	case *ast.InputExpr:
-		if e.Prompt != nil {
-			return a.analyzeExpr(e.Prompt)
-		}
-	case *ast.StructInitExpr:
-		a.markUsed(e.TypeName)
-		for _, v := range e.Fields {
-			if err := a.analyzeExpr(v); err != nil {
-				return err
-			}
-		}
-	case *ast.AwaitExpr:
-		if !a.inAsync {
-			return a.errorf(e.Line, e.Col, "stray awt")
-		}
-		return a.analyzeExpr(e.Value)
+
 	}
 	return nil
 }

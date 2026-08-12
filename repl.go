@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"drylang/analyzer"
 	"drylang/compiler"
 	"drylang/errfmt"
 	"drylang/lexer"
@@ -82,7 +83,15 @@ func runREPL() {
 			continue
 		}
 
-		// 3. Compile
+		// 3. Analyze
+		if err := analyzer.Analyze(prog); err != nil {
+			fmt.Println(err)
+			buffer.Reset()
+			prompt = ">>> "
+			continue
+		}
+
+		// 4. Compile
 		chunk, fns, err := comp.Compile(prog)
 		if err != nil {
 			fmt.Println(err)

@@ -5,7 +5,8 @@ import (
 )
 
 func OpJumpIfFalse(vm core.VMCore, target int) error {
-	if !core.IsTruthy(vm.Peek()) {
+	val := vm.Pop()
+	if !core.IsTruthy(val) {
 		vm.SetIP(target)
 	}
 	return nil

@@ -1,0 +1,27 @@
+# Maps
+
+Maps are defined using curly braces `{}` and hold key-value pairs. Keys must be strings.
+
+```rust
+user = {"name": "Zaky", "role": "Admin"}
+```
+
+## Map Property Access
+
+Access elements in a Map using bracket notation `[]`:
+
+```rust
+pt(user["name"]) // "Zaky"
+user["role"] = "Customer"
+```
+*Note: Dot notation (`user.name`) is strictly reserved for Structs and Classes. It is not supported for Maps.*
+
+## Map Destructuring
+You can extract values from a map directly into variables by matching the key names:
+
+```rust
+obj = {"x": 100, "y": 200}
+{x, y} = obj
+pt(x) // 100
+pt(y) // 200
+```

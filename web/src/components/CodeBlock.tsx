@@ -8,14 +8,14 @@ function highlightDryLang(code: string) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  const regex = /(\/\/.*)|(".*?")|(\b(?:fn|if|el|elif|lp|pt|cns|rev|brk|ret|imp|len|push|pop|del|map|keys|class|new|this|db|math|op|now|date|arg|env|cmd|dir|req|json|spl|trm|has|q|die)\b)|(\b\d+(?:,\d+)?\b)|(\b(?:tr|fs)\b)|(\b[a-zA-Z_]\w*\b(?=\())|(\?\?)/g;
+  const regex = /(\/\/.*|\/\*[\s\S]*?\*\/)|(".*?")|(\b(?:fn|if|el|elif|lp|cns|rev|done|con|on|asn|awt|try|err|pv|use|unknown|mul|uni|len|get|add|num|str|abs|min|max|rnd|cap|low|trm|spl|j|mod|has|sort|pop|rm|key|val|ran|q|r|w|now|date|req|json|arg|env|cmd|dir|del|die|op|db|math|in|pt|cl)\b)|(\b\d+(?:,\d+)?\b)|(\b(?:t|f)\b)|(\b[a-zA-Z_]\w*\b(?=\())|(\?\?)/g;
 
   return html.replace(regex, (match, p1, p2, p3, p4, p5, p6, p7) => {
     if (p1) return `<span style="color: #6a9955;">${p1}</span>`; // comments
     if (p2) return `<span style="color: #ce9178;">${p2}</span>`; // strings
     if (p3) return `<span style="color: #c586c0;">${p3}</span>`; // keywords & built-ins
     if (p4) return `<span style="color: #b5cea8;">${p4}</span>`; // numbers
-    if (p5) return `<span style="color: #569cd6;">${p5}</span>`; // booleans (tr/fs)
+    if (p5) return `<span style="color: #569cd6;">${p5}</span>`; // booleans (t/f)
     if (p6) return `<span style="color: #dcdcaa;">${p6}</span>`; // function calls
     if (p7) return `<span style="color: #c586c0;">${p7}</span>`; // ?? operator
     return match;

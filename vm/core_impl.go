@@ -40,7 +40,7 @@ func (vm *VM) CallFunction(fn *core.CompiledFn, argCount int) error {
 
 func (vm *VM) PushFrame(fn *core.CompiledFn, argCount int) error {
 	frame := callFrame{
-		fn:    fn,
+		closure: &core.Closure{Fn: fn, Env: make(map[string]core.Value)},
 		ip:    0,
 		bp:    vm.sp - argCount,
 		chunk: fn.Chunk,
@@ -54,25 +54,15 @@ func (vm *VM) PopFrame() {
 }
 
 func (vm *VM) GetIP() int {
-	if len(vm.frames) == 0 {
-		return vm.ip
-	}
-	return vm.frames[len(vm.frames)-1].ip
+	return vm.ip
 }
 
 func (vm *VM) SetIP(ip int) {
-	if len(vm.frames) == 0 {
-		vm.ip = ip
-	} else {
-		vm.frames[len(vm.frames)-1].ip = ip
-	}
+	vm.ip = ip
 }
 
 func (vm *VM) GetChunk() *core.Chunk {
-	if len(vm.frames) == 0 {
-		return vm.chunk
-	}
-	return vm.frames[len(vm.frames)-1].chunk
+	return vm.chunk
 }
 
 func (vm *VM) Errorf(format string, args ...interface{}) error {
@@ -110,3 +100,5 @@ func (vm *VM) Throw() error {
 	return fmt.Errorf("%s", v.String())
 }
 
+func (vm *VM) Sp() int { return vm.sp }
+func (vm *VM) Stack() []core.Value { return vm.stack[:vm.sp] }

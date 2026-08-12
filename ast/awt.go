@@ -1,13 +1,12 @@
 package ast
 
-type AwaitExpr struct {
-	Value Expr
+type AwaitStmt struct {
 	Line  int
 	Col   int
 }
 
-func (n *AwaitExpr) exprNode() {}
+func (n *AwaitStmt) stmtNode() {}
 
-func (n *AwaitExpr) TokenLine() int { return n.Line }
+func (n *AwaitStmt) TokenLine() int { return n.Line }
 
-func (n *AwaitExpr) TokenCol() int { return n.Col }
+func (n *AwaitStmt) TokenCol() int { return n.Col }

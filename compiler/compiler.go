@@ -4,7 +4,6 @@ import (
 	"drylang/ast"
 	"drylang/core"
 	"drylang/errfmt"
-	"drylang/ast"
 	"drylang/lexer"
 	"drylang/compiler/varhandler"
 	"drylang/compiler/exprhandler"
@@ -14,12 +13,14 @@ import (
 
 // Compiler compiles AST to bytecode.
 type Compiler struct {
-	chunk   *core.Chunk
-	locals  []local
-	depth   int
-	fns     []*core.CompiledFn
-	loopCtx []loopContext
-	globals map[string]bool
+	chunk     *core.Chunk
+	locals    []local
+	maxLocals int
+	depth     int
+	globals   map[string]bool
+	fns       []*core.CompiledFn
+	loopCtx   []loopContext
+	slotNames map[int]string
 }
 
 type local struct {
@@ -28,15 +29,17 @@ type local struct {
 }
 
 type loopContext struct {
-	start  int
-	breaks []int // indices to patch
+	start      int
+	breaks     []int // jump indices to patch to after-loop
+	continues  []int // jump indices to patch to increment/loop-top
 }
 
 // New creates a new compiler.
 func New() *Compiler {
 	return &Compiler{
-		chunk:   &core.Chunk{},
-		globals: make(map[string]bool),
+		chunk:     &core.Chunk{},
+		globals:   make(map[string]bool),
+		slotNames: make(map[int]string),
 	}
 }
 
@@ -47,6 +50,7 @@ func (c *Compiler) Compile(prog *ast.Program) (*core.Chunk, []*core.CompiledFn, 
 			return nil, nil, err
 		}
 	}
+	c.chunk.LocalsCount = c.maxLocals
 	return c.chunk, c.fns, nil
 }
 
@@ -77,7 +81,12 @@ func (c *Compiler) resolveLocal(name string) int {
 
 func (c *Compiler) addLocal(name string) int {
 	c.locals = append(c.locals, local{name: name, depth: c.depth})
-	return len(c.locals) - 1
+	if len(c.locals) > c.maxLocals {
+		c.maxLocals = len(c.locals)
+	}
+	slot := len(c.locals) - 1
+	c.slotNames[slot] = name
+	return slot
 }
 
 func (c *Compiler) beginScope() {
@@ -87,7 +96,6 @@ func (c *Compiler) beginScope() {
 func (c *Compiler) endScope() {
 	for len(c.locals) > 0 && c.locals[len(c.locals)-1].depth == c.depth {
 		c.locals = c.locals[:len(c.locals)-1]
-		c.emit(core.OpPop, 0, 0, 0)
 	}
 	c.depth--
 }
@@ -96,6 +104,8 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) error {
 	switch s := stmt.(type) {
 	case *ast.AssignStmt:
 		return varhandler.CompileAssign(c, s)
+	case *ast.ConstDeclStmt:
+		return varhandler.CompileConstDecl(c, s)
 	case *ast.ExprStmt:
 		return exprhandler.CompileExprStmt(c, s)
 	case *ast.UnknownBoolStmt:
@@ -122,9 +132,7 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) error {
 					slot := c.addLocal(name)
 					c.emit(core.OpSetLocal, slot, s.Line, s.Col)
 				}
-				c.emit(core.OpPop, 0, s.Line, s.Col)
 			}
-			c.locals = c.locals[:len(c.locals)-1]
 		} else {
 			ci := c.addConst("__destruct__")
 			c.emit(core.OpSetGlobal, ci, s.Line, s.Col)
@@ -137,10 +145,8 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) error {
 				c.globals[name] = true
 				nameConst := c.addConst(name)
 				c.emit(core.OpSetGlobal, nameConst, s.Line, s.Col)
-				c.emit(core.OpPop, 0, s.Line, s.Col)
 			}
 		}
-		c.emit(core.OpPop, 0, s.Line, s.Col)
 		return nil
 
 		case *ast.DestructMapStmt:
@@ -165,7 +171,6 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) error {
 					c.emit(core.OpSetLocal, slot, s.Line, s.Col)
 				}
 			}
-			c.locals = c.locals[:len(c.locals)-1]
 		} else {
 			ci := c.addConst("__destruct__")
 			c.emit(core.OpSetGlobal, ci, s.Line, s.Col)
@@ -180,6 +185,7 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) error {
 				c.emit(core.OpSetGlobal, nameConst, s.Line, s.Col)
 			}
 		}
+		return nil
 case *ast.ReturnStmt:
 		if s.Value != nil {
 			if err := c.compileExpr(s.Value); err != nil {
@@ -200,6 +206,27 @@ case *ast.ReturnStmt:
 	case *ast.OnStmt:
 		return c.compileOn(s)
 
+	case *ast.MulCallStmt:
+		if err := c.compileExpr(s.Call.Callee); err != nil {
+			return err
+		}
+		for _, arg := range s.Call.Args {
+			if err := c.compileExpr(arg); err != nil {
+				return err
+			}
+		}
+		if s.Workers == 1 {
+			c.emit(core.OpCall, len(s.Call.Args), s.Line, s.Col)
+			c.emit(core.OpPop, 0, s.Line, s.Col)
+		} else {
+			c.emit2(core.OpAsyncCall, len(s.Call.Args), s.Workers, s.Line, s.Col)
+		}
+		return nil
+
+	case *ast.AwaitStmt:
+		c.emit(core.OpAwait, 0, s.Line, s.Col)
+		return nil
+
 	case *ast.LoopStmt:
 		return c.compileLoop(s)
 
@@ -217,7 +244,8 @@ case *ast.ReturnStmt:
 			return c.errorf("E204", s.Line, s.Col, "stray con")
 		}
 		ctx := &c.loopCtx[len(c.loopCtx)-1]
-		c.emit(core.OpLoop, ctx.start, s.Line, s.Col)
+		jmp := c.emit(core.OpJump, 0, s.Line, s.Col)
+		ctx.continues = append(ctx.continues, jmp)
 		return nil
 
 	case *ast.TryStmt:
@@ -271,6 +299,7 @@ case *ast.ReturnStmt:
 				sub.emit(core.OpUnknown, 0, m.Line, m.Col)
 				sub.emit(core.OpReturn, 0, m.Line, m.Col)
 			}
+			sub.chunk.LocalsCount = sub.maxLocals
 
 			methods[m.Name] = core.ClassMethod{
 				Chunk: sub.chunk,
@@ -487,6 +516,7 @@ func (c *Compiler) compileExpr(expr ast.Expr) error {
 		}
 		fnCompiler.emit(core.OpUnknown, 0, e.Line, e.Col) // default return
 		fnCompiler.emit(core.OpReturn, 0, e.Line, e.Col)
+		fnCompiler.chunk.LocalsCount = fnCompiler.maxLocals
 
 		fn := &core.CompiledFn{
 			Chunk: fnCompiler.chunk,
@@ -508,8 +538,6 @@ func (c *Compiler) compileExpr(expr ast.Expr) error {
 
 	case *ast.StructInitExpr:
 		// Push field values and create struct instance
-		ci := c.addConst(e.TypeName)
-		c.emit(core.OpConst, ci, e.Line, e.Col)
 		for fname, fval := range e.Fields {
 			fni := c.addConst(fname)
 			c.emit(core.OpConst, fni, e.Line, e.Col)
@@ -517,13 +545,11 @@ func (c *Compiler) compileExpr(expr ast.Expr) error {
 				return err
 			}
 		}
-		c.emit(core.OpMap, len(e.Fields), e.Line, e.Col)
-
-	case *ast.AwaitExpr:
-		if err := c.compileExpr(e.Value); err != nil {
-			return err
-		}
-		c.emit(core.OpAwait, 0, e.Line, e.Col)
+		// Also inject the __struct__ field
+		c.emit(core.OpConst, c.addConst("__struct__"), e.Line, e.Col)
+		c.emit(core.OpConst, c.addConst(e.TypeName), e.Line, e.Col)
+		
+		c.emit(core.OpMap, len(e.Fields)+1, e.Line, e.Col)
 	}
 
 	return nil
@@ -543,12 +569,14 @@ func (c *Compiler) compileFnDecl(s *ast.FnDeclStmt) error {
 	}
 	fnCompiler.emit(core.OpUnknown, 0, s.Line, s.Col) // default return unknown
 	fnCompiler.emit(core.OpReturn, 0, s.Line, s.Col)
+	fnCompiler.chunk.LocalsCount = fnCompiler.maxLocals
 
 	fn := &core.CompiledFn{
-		Chunk: fnCompiler.chunk,
+		Chunk:      fnCompiler.chunk,
 		Name:       s.Name,
 		ParamCount: len(s.Params),
 		IsAsync:    s.IsAsync,
+		LocalNames: fnCompiler.slotNames,
 	}
 
 	c.fns = append(c.fns, fn)
@@ -556,7 +584,8 @@ func (c *Compiler) compileFnDecl(s *ast.FnDeclStmt) error {
 	c.emit(core.OpClosure, fi, s.Line, s.Col)
 
 	if c.depth > 0 {
-		c.addLocal(s.Name)
+		slot := c.addLocal(s.Name)
+		c.emit(core.OpSetLocal, slot, s.Line, s.Col)
 	} else {
 		c.globals[s.Name] = true
 		ci := c.addConst(s.Name)
@@ -634,11 +663,16 @@ func (c *Compiler) compileOn(s *ast.OnStmt) error {
 		return err
 	}
 
+	// Save switch value to a temp local
+	c.beginScope()
+	switchSlot := c.addLocal("__switch__")
+	c.emit(core.OpSetLocal, switchSlot, s.Line, s.Col)
+
 	var endJumps []int
 
 	for _, cas := range s.Cases {
-		// Duplicate the switch value
-		c.emit(core.OpConst, c.addConst("__dup__"), s.Line, s.Col) // placeholder
+		// Re-read switch value for comparison
+		c.emit(core.OpGetLocal, switchSlot, s.Line, s.Col)
 		if err := c.compileExpr(cas.Value); err != nil {
 			return err
 		}
@@ -662,7 +696,7 @@ func (c *Compiler) compileOn(s *ast.OnStmt) error {
 		c.chunk.Code[ej].Operand = len(c.chunk.Code)
 	}
 
-	c.emit(core.OpPop, 0, s.Line, s.Col) // pop switch value
+	c.endScope() // remove __switch__ temp local
 
 	return nil
 }
@@ -675,7 +709,8 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 		// Counted loop: emit counter init and check
 		ci := c.addConst(float64(0))
 		c.emit(core.OpConst, ci, s.Line, s.Col) // push 0 as counter
-		c.addLocal("i")
+		iSlot := c.addLocal("i")
+		c.emit(core.OpSetLocal, iSlot, s.Line, s.Col)
 
 		loopStart = len(c.chunk.Code) // actual loop start
 		c.loopCtx[len(c.loopCtx)-1].start = loopStart
@@ -697,18 +732,23 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 		}
 		c.endScope()
 
-		// Increment i
+		// Increment i — con jumps here
+		incrementStart := len(c.chunk.Code)
+		// Patch continues to jump here
+		for _, cj := range c.loopCtx[len(c.loopCtx)-1].continues {
+			c.chunk.Code[cj].Operand = incrementStart
+		}
+		c.loopCtx[len(c.loopCtx)-1].continues = nil
 		c.emit(core.OpGetLocal, idx, s.Line, s.Col)
 		c.emit(core.OpConst, c.addConst(float64(1)), s.Line, s.Col)
 		c.emit(core.OpAdd, 0, s.Line, s.Col)
 		c.emit(core.OpSetLocal, idx, s.Line, s.Col)
 
-		c.emit(core.OpLoop, loopStart, s.Line, s.Col)
+		c.emit(core.OpLoop, len(c.chunk.Code)+1-loopStart, s.Line, s.Col)
 		c.chunk.Code[exitJump].Operand = len(c.chunk.Code)
 
 		// Remove counter local
 		c.locals = c.locals[:len(c.locals)-1]
-		c.emit(core.OpPop, 0, s.Line, s.Col)
 	} else {
 		// Infinite loop
 		c.beginScope()
@@ -718,13 +758,17 @@ func (c *Compiler) compileLoop(s *ast.LoopStmt) error {
 			}
 		}
 		c.endScope()
-		c.emit(core.OpLoop, loopStart, s.Line, s.Col)
+		c.emit(core.OpLoop, len(c.chunk.Code)+1-loopStart, s.Line, s.Col)
 	}
 
 	// Patch breaks
 	ctx := c.loopCtx[len(c.loopCtx)-1]
 	for _, b := range ctx.breaks {
 		c.chunk.Code[b].Operand = len(c.chunk.Code)
+	}
+	// Patch any remaining continues (infinite loop: jump to loop start)
+	for _, cj := range ctx.continues {
+		c.chunk.Code[cj].Operand = loopStart
 	}
 	c.loopCtx = c.loopCtx[:len(c.loopCtx)-1]
 
@@ -749,7 +793,8 @@ func (c *Compiler) compileTry(s *ast.TryStmt) error {
 	c.chunk.Code[tryJump].Operand = len(c.chunk.Code)
 
 	c.beginScope()
-	c.addLocal(s.ErrName) // error variable
+	errSlot := c.addLocal(s.ErrName) // error variable
+	c.emit(core.OpSetLocal, errSlot, s.Line, s.Col) // Throw() pushed error to TOS
 	for _, stmt := range s.Catch {
 		if err := c.compileStmt(stmt); err != nil {
 			return err
