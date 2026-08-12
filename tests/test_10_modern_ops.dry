@@ -1,0 +1,62 @@
+// 1. Destructuring Array
+arr = [10, 20, 30]
+[a, b, c] = arr
+
+if a = 10 & b = 20 & c = 30 {
+	pt("Destructuring Array: OK")
+} el {
+	pt("Destructuring Array: FAIL")
+}
+
+// 2. Destructuring Map
+obj = {"x": 100, "y": 200}
+{x, y} = obj
+
+if x = 100 & y = 200 {
+	pt("Destructuring Map: OK")
+} el {
+	pt("Destructuring Map: FAIL")
+}
+
+// 3. Null Coalescing (??)
+d = unknown
+e = d ?? 999
+res2 = a ?? 888
+
+if e = 999 & res2 = 10 {
+	pt("Null Coalescing: OK")
+} el {
+	pt("Null Coalescing: FAIL")
+}
+
+// 4. Optional Chaining (?.)
+unkObj = unknown
+val = unkObj?.name?.first
+
+if val = unknown {
+	pt("Optional Chaining (unknown target): OK")
+} el {
+	pt("Optional Chaining (unknown target): FAIL")
+}
+
+// Note: Testing Optional Chaining on non-instance string
+strObj = "hello"
+val2 = strObj?.something
+if val2 = unknown {
+    pt("Optional Chaining (non-instance target): OK")
+} el {
+    pt("Optional Chaining (non-instance target): FAIL")
+}
+
+// Test short-circuit in ??
+wasEvaluated = f
+fn sideEffect() {
+	wasEvaluated = true
+	rev 100
+}
+g = 1 ?? sideEffect()
+if wasEvaluated = f {
+	pt("Null Coalescing Short-circuit: OK")
+} el {
+	pt("Null Coalescing Short-circuit: FAIL")
+}
