@@ -57,17 +57,84 @@ This file indexes all keywords, built-in functions, operators, delimiters, liter
 ### `done`
 **Means:** Break out of a loop.
 - Lexer: [lexer/token.go:30](lexer/token.go#L30)
+<<<<<<< HEAD
 - AST: [ast/](ast/)
 - Parser: [parser/stmt/done.go](parser/stmt/done.go)
 - Compiler: [compiler/stmt_funcs.go](compiler/stmt_funcs.go)
+=======
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:165](parser/parser.go#L165)
+- Compiler: [compiler/compiler.go:233](compiler/compiler.go#L233)
+### `cns`
+**Means:** Constant declaration.
+- Lexer: [lexer/token.go:159](lexer/token.go#L159)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:146](parser/parser.go#L146)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `t`
+**Means:** Boolean true.
+- Lexer: [lexer/token.go:160](lexer/token.go#L160)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:175](parser/parser.go#L175)
+- Compiler: [compiler/compiler.go:252](compiler/compiler.go#L252)
+- VM Exec: [vm/vm.go:196](vm/vm.go#L196)
+
+### `f`
+**Means:** Boolean false.
+- Lexer: [lexer/token.go:161](lexer/token.go#L161)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:148](parser/parser.go#L148)
+- Compiler: [compiler/compiler.go:201](compiler/compiler.go#L201)
+- VM Exec: [vm/vm.go:198](vm/vm.go#L198)
+
+### `fn`
+**Means:** Function declaration.
+- Lexer: [lexer/token.go:162](lexer/token.go#L162)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:148](parser/parser.go#L148)
+- Compiler: [compiler/compiler.go:201](compiler/compiler.go#L201)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `rev`
+**Means:** Return/exit statement.
+- Lexer: [lexer/token.go:163](lexer/token.go#L163)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:157](parser/parser.go#L157)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `if`
+**Means:** If conditional.
+- Lexer: [lexer/token.go:164](lexer/token.go#L164)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:159](parser/parser.go#L159)
+- Compiler: [compiler/compiler.go:204](compiler/compiler.go#L204)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `elif`
+**Means:** Else-if conditional.
+- Lexer: [lexer/token.go:165](lexer/token.go#L165)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go](parser/parser.go)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 - VM Exec: [vm/vm.go](vm/vm.go)
 
 ### `el`
 **Means:** Else conditional.
 - Lexer: [lexer/token.go:26](lexer/token.go#L26)
+<<<<<<< HEAD
 - AST: [ast/](ast/)
 - Parser: [parser/stmt/if.go](parser/stmt/if.go)
 - Compiler: [compiler/stmt_control.go](compiler/stmt_control.go)
+=======
+- Lexer: [lexer/token.go:166](lexer/token.go#L166)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go](parser/parser.go)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 - VM Exec: [vm/vm.go](vm/vm.go)
 
 ### `elif`
@@ -128,16 +195,90 @@ This file indexes all keywords, built-in functions, operators, delimiters, liter
 ### `on`
 **Means:** Switch/case block.
 - Lexer: [lexer/token.go:28](lexer/token.go#L28)
+<<<<<<< HEAD
 - AST: [ast/](ast/)
 - Parser: [parser/stmt/on.go](parser/stmt/on.go)
 - Compiler: [compiler/stmt_control.go](compiler/stmt_control.go)
+=======
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:161](parser/parser.go#L161)
+- Compiler: [compiler/compiler.go:207](compiler/compiler.go#L207)
+### `on`
+**Means:** Switch/case block.
+- Lexer: [lexer/token.go:167](lexer/token.go#L167)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:161](parser/parser.go#L161)
+- Compiler: [compiler/compiler.go:207](compiler/compiler.go#L207)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `lp`
+**Means:** Loop block.
+- Lexer: [lexer/token.go:168](lexer/token.go#L168)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:38](parser/parser.go#L38)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `done`
+**Means:** Break out of a loop.
+- Lexer: [lexer/token.go:169](lexer/token.go#L169)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:165](parser/parser.go#L165)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `con`
+**Means:** Continue to next loop iteration.
+- Lexer: [lexer/token.go:170](lexer/token.go#L170)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:167](parser/parser.go#L167)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go:163](vm/vm.go#L163)
+
+### `asn`
+**Means:** Async function modifier.
+- Lexer: [lexer/token.go:171](lexer/token.go#L171)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:150](parser/parser.go#L150)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `awt`
+**Means:** Await async function call.
+- Lexer: [lexer/token.go:172](lexer/token.go#L172)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:173](parser/parser.go#L173)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `try`
+**Means:** Try block for error handling.
+- Lexer: [lexer/token.go:173](lexer/token.go#L173)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:175](parser/parser.go#L175)
+- Compiler: [compiler/compiler.go:252](compiler/compiler.go#L252)
+- VM Exec: [vm/vm.go:385](vm/vm.go#L385)
+
+### `err`
+**Means:** Catch/error block.
+- Lexer: [lexer/token.go:174](lexer/token.go#L174)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:177](parser/parser.go#L177)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 - VM Exec: [vm/vm.go](vm/vm.go)
 
 ### `pv`
 **Means:** Private access modifier.
 - Lexer: [lexer/token.go:36](lexer/token.go#L36)
+<<<<<<< HEAD
 - AST: [ast/](ast/)
 - Parser: [parser/stmt/pv.go](parser/stmt/pv.go)
+=======
+- Lexer: [lexer/token.go:175](lexer/token.go#L175)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:181](parser/parser.go#L181)
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 - Compiler: [compiler/compiler.go](compiler/compiler.go)
 - VM Exec: [vm/vm.go](vm/vm.go)
 
@@ -184,8 +325,51 @@ This file indexes all keywords, built-in functions, operators, delimiters, liter
 ### `use`
 **Means:** Import file/lib/package.
 - Lexer: [lexer/token.go:37](lexer/token.go#L37)
+<<<<<<< HEAD
 - AST: [ast/](ast/)
 - Parser: [parser/stmt/use.go](parser/stmt/use.go)
+=======
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:179](parser/parser.go#L179)
+- Compiler: [compiler/compiler.go:261](compiler/compiler.go#L261)
+### `use`
+**Means:** Import/use module.
+- Lexer: [lexer/token.go:176](lexer/token.go#L176)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:179](parser/parser.go#L179)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go](vm/vm.go)
+
+### `cl`
+**Means:** Clear output/console.
+- Lexer: [lexer/token.go:177](lexer/token.go#L177)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:183](parser/parser.go#L183)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go:367](vm/vm.go#L367)
+
+### `unknown`
+**Means:** Unknown boolean literal.
+- Lexer: [lexer/token.go:178](lexer/token.go#L178)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go](parser/parser.go)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go:200](vm/vm.go#L200)
+
+### `mul`
+**Means:** Spawn multiple async tasks.
+- Lexer: [lexer/token.go:179](lexer/token.go#L179)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:169](parser/parser.go#L169)
+- Compiler: [compiler/compiler.go](compiler/compiler.go)
+- VM Exec: [vm/vm.go:213](vm/vm.go#L213)
+
+### `uni`
+**Means:** Unidirectional detached async execution.
+- Lexer: [lexer/token.go:180](lexer/token.go#L180)
+- AST: [ast/ast.go](ast/ast.go)
+- Parser: [parser/parser.go:171](parser/parser.go#L171)
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 - Compiler: [compiler/compiler.go](compiler/compiler.go)
 - VM Exec: [vm/vm.go](vm/vm.go)
 
@@ -527,7 +711,211 @@ This file indexes all keywords, built-in functions, operators, delimiters, liter
 ### `ws`
 **Means:** WebSockets support.
 - Core: [core/types.go:67](core/types.go#L67)
+<<<<<<< HEAD
 - VM Exec: [handler/http/ws.go:19](handler/http/ws.go#L19)
+=======
+- VM Exec: [vm/iohandler/ws.go:19](vm/iohandler/ws.go#L19)
+### `len`
+**Means:** Get length of string, array, or map.
+- Core: [core/types.go:51](core/types.go#L51)
+- VM Exec: [vm/vm.go:485](vm/vm.go#L485)
+
+### `get`
+**Means:** Get type of a value as string.
+- Core: [core/types.go:52](core/types.go#L52)
+- VM Exec: [vm/vm.go:500](vm/vm.go#L500)
+
+### `add`
+**Means:** Append item to array.
+- Core: [core/types.go:53](core/types.go#L53)
+- VM Exec: [vm/vm.go:506](vm/vm.go#L506)
+
+### `num`
+**Means:** Convert string to number.
+- Core: [core/types.go:54](core/types.go#L54)
+- VM Exec: [vm/vm.go:519](vm/vm.go#L519)
+
+### `str`
+**Means:** Convert number to string.
+- Core: [core/types.go:55](core/types.go#L55)
+- VM Exec: [vm/vm.go:529](vm/vm.go#L529)
+
+### `abs`
+**Means:** Absolute value of a number.
+- Core: [core/types.go:56](core/types.go#L56)
+- VM Exec: [vm/vm.go:535](vm/vm.go#L535)
+
+### `min`
+**Means:** Minimum of two numbers.
+- Core: [core/types.go:57](core/types.go#L57)
+- VM Exec: [vm/vm.go:541](vm/vm.go#L541)
+
+### `max`
+**Means:** Maximum of two numbers.
+- Core: [core/types.go:58](core/types.go#L58)
+- VM Exec: [vm/vm.go:547](vm/vm.go#L547)
+
+### `rnd`
+**Means:** Round number to nearest integer.
+- Core: [core/types.go:59](core/types.go#L59)
+- VM Exec: [vm/vm.go:553](vm/vm.go#L553)
+
+### `cap`
+**Means:** Capitalize string (Title Case).
+- Core: [core/types.go:60](core/types.go#L60)
+- VM Exec: [vm/vm.go:559](vm/vm.go#L559)
+
+### `low`
+**Means:** Lowercase string.
+- Core: [core/types.go:61](core/types.go#L61)
+- VM Exec: [vm/vm.go:565](vm/vm.go#L565)
+
+### `trm`
+**Means:** Trim whitespace from string.
+- Core: [core/types.go:62](core/types.go#L62)
+- VM Exec: [vm/vm.go:571](vm/vm.go#L571)
+
+### `spl`
+**Means:** Split string by separator.
+- Core: [core/types.go:63](core/types.go#L63)
+- VM Exec: [vm/vm.go:577](vm/vm.go#L577)
+
+### `j`
+**Means:** Join array of strings.
+- Core: [core/types.go:64](core/types.go#L64)
+- VM Exec: [vm/vm.go:588](vm/vm.go#L588)
+
+### `mod`
+**Means:** Modulo operation.
+- Core: [core/types.go:65](core/types.go#L65)
+- VM Exec: [vm/vm.go:599](vm/vm.go#L599)
+
+### `has`
+**Means:** Check if string contains substring or map has key.
+- Core: [core/types.go:66](core/types.go#L66)
+- VM Exec: [vm/vm.go:605](vm/vm.go#L605)
+
+### `sort`
+**Means:** Sort array.
+- Core: [core/types.go:67](core/types.go#L67)
+- VM Exec: [vm/vm.go:636](vm/vm.go#L636)
+
+### `pop`
+**Means:** Pop last item from array.
+- Core: [core/types.go:68](core/types.go#L68)
+- VM Exec: [vm/vm.go:650](vm/vm.go#L650)
+
+### `rm`
+**Means:** Remove item from array by index, or delete file by path.
+- Core: [core/types.go:69](core/types.go#L69)
+- VM Exec: [vm/vm.go:660](vm/vm.go#L660)
+
+### `key`
+**Means:** Get keys of a map.
+- Core: [core/types.go:70](core/types.go#L70)
+- VM Exec: [vm/vm.go:683](vm/vm.go#L683)
+
+### `val`
+**Means:** Get values of a map.
+- Core: [core/types.go:71](core/types.go#L71)
+- VM Exec: [vm/vm.go:694](vm/vm.go#L694)
+
+### `ran`
+**Means:** Generate random float between 0 and 1.
+- Core: [core/types.go:72](core/types.go#L72)
+- VM Exec: [vm/vm.go:705](vm/vm.go#L705)
+
+### `q`
+**Means:** Quit/exit program forcefully.
+- Core: [core/types.go:73](core/types.go#L73)
+- VM Exec: [vm/vm.go:708](vm/vm.go#L708)
+
+### `r`
+**Means:** Read file contents.
+- Core: [core/types.go:74](core/types.go#L74)
+- VM Exec: [vm/vm.go:553](vm/vm.go#L553)
+
+### `w`
+**Means:** Write data to file.
+- Core: [core/types.go:75](core/types.go#L75)
+- VM Exec: [vm/vm.go:726](vm/vm.go#L726)
+
+### `now`
+**Means:** Get current timestamp.
+- Core: [core/types.go:76](core/types.go#L76)
+- VM Exec: [vm/vm.go:954](vm/vm.go#L954)
+
+### `date`
+**Means:** Format timestamp to date string.
+- Core: [core/types.go:77](core/types.go#L77)
+- VM Exec: [vm/vm.go:957](vm/vm.go#L957)
+
+### `req`
+**Means:** Make HTTP request.
+- Core: [core/types.go:78](core/types.go#L78)
+- VM Exec: [vm/vm.go:969](vm/vm.go#L969)
+
+### `json`
+**Means:** Parse JSON string to object, or stringify object to JSON.
+- Core: [core/types.go:79](core/types.go#L79)
+- VM Exec: [vm/vm.go:976](vm/vm.go#L976)
+
+### `arg`
+**Means:** Get CLI arguments.
+- Core: [core/types.go:80](core/types.go#L80)
+- VM Exec: [vm/vm.go:998](vm/vm.go#L998)
+
+### `env`
+**Means:** Get environment variables.
+- Core: [core/types.go:81](core/types.go#L81)
+- VM Exec: [vm/vm.go:1012](vm/vm.go#L1012)
+
+### `cmd`
+**Means:** Execute shell command.
+- Core: [core/types.go:82](core/types.go#L82)
+- VM Exec: [vm/vm.go:1018](vm/vm.go#L1018)
+
+### `dir`
+**Means:** List directory contents.
+- Core: [core/types.go:83](core/types.go#L83)
+- VM Exec: [vm/vm.go:1039](vm/vm.go#L1039)
+
+### `del`
+**Means:** Delete variable/reference.
+- Core: [core/types.go:84](core/types.go#L84)
+- VM Exec: [vm/vm.go:1053](vm/vm.go#L1053)
+
+### `die`
+**Means:** Exit program with error code.
+- Core: [core/types.go:85](core/types.go#L85)
+- VM Exec: [vm/vm.go:1063](vm/vm.go#L1063)
+
+### `op`
+**Means:** Open file or stream.
+- Core: [core/types.go:86](core/types.go#L86)
+- VM Exec: [vm/vm.go:736](vm/vm.go#L736)
+
+### `db`
+**Means:** Database operations entrypoint.
+- Core: [core/types.go:87](core/types.go#L87)
+- VM Exec: [vm/vm.go:863](vm/vm.go#L863)
+
+### `math`
+**Means:** Math operations module/namespace.
+- Core: [core/types.go:88](core/types.go#L88)
+- VM Exec: [vm/vm.go:1073](vm/vm.go#L1073)
+
+### `in`
+**Means:** Read input from standard input.
+- Core: [core/types.go:89](core/types.go#L89)
+- VM Exec: [vm/vm.go:1088](vm/vm.go#L1088)
+
+### `pt`
+**Means:** Print to standard output.
+- Core: [core/types.go:90](core/types.go#L90)
+- VM Exec: [vm/vm.go:1080](vm/vm.go#L1080)
+
+>>>>>>> bb7a0c19659becbf257b6f9be22e9f5969a929b6
 
 ## Literals & Specials
 
