@@ -44,6 +44,34 @@ const (
 	BuiltinMath
 	BuiltinIn
 	BuiltinPt
+	BuiltinHash
+	BuiltinEnc
+	BuiltinJwt
+	BuiltinRgx
+	BuiltinFmt
+	BuiltinValid
+	BuiltinRt
+	BuiltinSys
+	BuiltinPipe
+	BuiltinCron
+	BuiltinJob
+	BuiltinRate
+	BuiltinSess
+	BuiltinHook
+	BuiltinFlag
+	BuiltinImg
+	BuiltinDoc
+	BuiltinTmpl
+	BuiltinMail
+	BuiltinMem
+	BuiltinWs
+	BuiltinRpc
+	BuiltinMet
+	BuiltinGeo
+	BuiltinFlow
+	BuiltinTest
+	BuiltinDbpool
+	BuiltinLog
 )
 
 // BuiltinNames maps function names to builtin IDs.
@@ -88,6 +116,33 @@ var BuiltinNames = map[string]BuiltinID{
 	"math": BuiltinMath,
 	"in":   BuiltinIn,
 	"pt":   BuiltinPt,
+	"hash": BuiltinHash,
+	"enc":  BuiltinEnc,
+	"jwt":  BuiltinJwt,
+	"rgx":  BuiltinRgx,
+	"fmt":  BuiltinFmt,
+	"valid": BuiltinValid,
+	"rt":   BuiltinRt,
+	"sys":  BuiltinSys,
+	"pipe": BuiltinPipe,
+	"cron": BuiltinCron,
+	"job":  BuiltinJob,
+	"rate": BuiltinRate,
+	"sess": BuiltinSess,
+	"flag": BuiltinFlag,
+	"img":  BuiltinImg,
+	"doc":  BuiltinDoc,
+	"tmpl": BuiltinTmpl,
+	"mail": BuiltinMail,
+	"mem":  BuiltinMem,
+	"ws":   BuiltinWs,
+	"rpc":  BuiltinRpc,
+	"met":  BuiltinMet,
+	"geo":  BuiltinGeo,
+	"flow": BuiltinFlow,
+	"test": BuiltinTest,
+	"dbpool": BuiltinDbpool,
+	"log": BuiltinLog,
 }
 
 type StructDef struct {

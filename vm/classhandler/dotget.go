@@ -11,6 +11,15 @@ func OpDotGet(vm core.VMCore, line, col int, fieldName string, optional bool) er
 		return nil
 	}
 	
+	if obj.Type == core.ValBuiltinModule {
+		mod := obj.Data.(core.BuiltinModule)
+		vm.Push(core.Value{
+			Type: core.ValBuiltinFn,
+			Data: core.BuiltinFn{ModuleID: mod.ModuleID, Method: fieldName},
+		})
+		return nil
+	}
+
 	if obj.Type == core.ValStructInstance {
 		fields := obj.Data.(map[string]core.Value)
 		if val, ok := fields[fieldName]; ok {

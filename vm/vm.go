@@ -7,10 +7,12 @@ import (
 	"drylang/vm/classhandler"
 	"drylang/vm/colshandler"
 	"drylang/vm/controlhandler"
+	"drylang/vm/cryptohandler"
 	"drylang/vm/errorhandler"
 	"drylang/vm/functionhandler"
 	"drylang/vm/iohandler"
 	"drylang/vm/mathhandler"
+	"drylang/vm/strhandler"
 	"drylang/vm/varhandler"
 	"encoding/json"
 	"fmt"
@@ -71,6 +73,7 @@ type tryFrame struct {
 
 // New creates a new VM.
 func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
+	vm := &VM{
 	return &VM{
 		chunk:      chunk,
 		fns:        fns,
@@ -80,6 +83,9 @@ func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
 		ip:         0,
 		asyncPools: make(map[*core.CompiledFn]chan asyncTask),
 	}
+	vm.globals["null"] = core.UnknownValue
+	registerBuiltinModules(vm)
+	return vm
 }
 
 func (vm *VM) push(v core.Value) {
@@ -102,7 +108,39 @@ func (vm *VM) peek() core.Value {
 }
 
 func (vm *VM) runtimeErr(code string, line, col int, format string, args ...interface{}) error {
-	return errfmt.Format(code, line, col, fmt.Sprintf(format, args...))
+	baseErr := errfmt.Format(code, line, col, fmt.Sprintf(format, args...))
+	if len(vm.frames) <= 1 {
+		return baseErr
+	}
+	
+	var trace strings.Builder
+	trace.WriteString(fmt.Sprintf("%v\nStack trace:", baseErr))
+	
+	// Start from the current frame (top of the stack) down to the bottom
+	for i := len(vm.frames) - 1; i >= 0; i-- {
+		frame := vm.frames[i]
+		fnName := "main"
+		if frame.closure != nil && frame.closure.Fn != nil && frame.closure.Fn.Name != "" {
+			fnName = frame.closure.Fn.Name
+		}
+		
+		// For the top frame, we already have exact line/col
+		if i == len(vm.frames)-1 {
+			trace.WriteString(fmt.Sprintf("\n  at %s() (line %d)", fnName, line))
+		} else {
+			// For previous frames, use frame.ip - 1 to get the call instruction's line
+			ip := frame.ip - 1
+			if ip < 0 {
+				ip = 0
+			}
+			fLine := 0
+			if ip < len(frame.chunk.Lines) {
+				fLine = frame.chunk.Lines[ip]
+			}
+			trace.WriteString(fmt.Sprintf("\n  at %s() (line %d)", fnName, fLine))
+		}
+	}
+	return fmt.Errorf("%s", trace.String())
 }
 
 // Run executes the main chunk.
@@ -132,6 +170,22 @@ func (vm *VM) execute(chunk *core.Chunk) error {
 		if err == nil {
 			return nil
 		}
+
+		if len(vm.tryStack) > 0 {
+			tf := vm.tryStack[len(vm.tryStack)-1]
+			if tf.frameDepth == baseDepth {
+				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+				vm.sp = tf.sp
+				vm.push(core.StringVal(err.Error()))
+				vm.ip = tf.catchIP
+				vm.chunk = chunk
+				continue
+			}
+		}
+		return err
+	}
+}
+
 
 		if len(vm.tryStack) > 0 {
 			tf := vm.tryStack[len(vm.tryStack)-1]
@@ -741,7 +795,8 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		if args[1].Type != core.ValFn {
 			return vm.runtimeErr("E300", line, col, "want handler function")
 		}
-		handlerFn := args[1].Data.(*core.CompiledFn)
+		closure := args[1].Data.(*core.Closure)
+		handlerFn := closure.Fn
 
 		mode := "uni"
 		if len(args) > 2 {
@@ -822,6 +877,10 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 				chunk: handlerFn.Chunk,
 			}
 			execVM.frames = append(execVM.frames, frame)
+
+			for execVM.sp < frame.bp + handlerFn.Chunk.LocalsCount + 1 {
+				execVM.push(core.UnknownValue)
+			}
 
 			err := execVM.execute(handlerFn.Chunk)
 
@@ -1077,6 +1136,204 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		}
 		result = res
 
+	case core.BuiltinHash:
+		res, err := cryptohandler.BuiltinHash(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinEnc:
+		res, err := cryptohandler.BuiltinEnc(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinJwt:
+		res, err := cryptohandler.BuiltinJwt(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinRgx:
+		res, err := strhandler.BuiltinRgx(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinFmt:
+		res, err := strhandler.BuiltinFmt(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinValid:
+		res, err := iohandler.BuiltinValid(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinRt:
+		res, err := iohandler.BuiltinRt(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinSys:
+		res, err := iohandler.BuiltinSys(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinPipe:
+		res, err := iohandler.BuiltinPipe(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinCron:
+		res, err := iohandler.BuiltinCron(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinJob:
+		res, err := iohandler.BuiltinJob(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinRate:
+		res, err := iohandler.BuiltinRate(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinSess:
+		res, err := iohandler.BuiltinSess(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinHook:
+		res, err := iohandler.BuiltinHook(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinFlag:
+		res, err := iohandler.BuiltinFlag(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinImg:
+		res, err := iohandler.BuiltinImg(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinDoc:
+		res, err := iohandler.BuiltinDoc(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinTmpl:
+		res, err := iohandler.BuiltinTmpl(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinMail:
+		res, err := iohandler.BuiltinMail(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinMem:
+		res, err := iohandler.BuiltinMem(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinWs:
+		res, err := iohandler.BuiltinWs(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinRpc:
+		res, err := iohandler.BuiltinRpc(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinMet:
+		res, err := iohandler.BuiltinMet(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinGeo:
+		res, err := iohandler.BuiltinGeo(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinFlow:
+		res, err := iohandler.BuiltinFlow(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinTest:
+		res, err := iohandler.BuiltinTest(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinDbpool:
+		res, err := iohandler.BuiltinDbpool(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+
+	case core.BuiltinLog:
+		res, err := iohandler.BuiltinLog(vm, args, line, col)
+		if err != nil {
+			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
+		}
+		result = res
+
 	case core.BuiltinPt:
 		var strs []string
 		for _, arg := range args {
@@ -1317,6 +1574,38 @@ func (vm *VM) callOp(argCount, line, col int) error {
 		vm.ip = savedIP
 		chunk = savedChunk
 		vm.chunk = chunk
+		return nil
+	}
+
+	if callee.Type == core.ValBuiltinFn {
+		bFn := callee.Data.(core.BuiltinFn)
+		// Builtins expect the method name as the first string argument
+		// We can just construct an arguments slice and call the builtin directly, 
+		// or we can manipulate the stack and call executeBuiltin.
+		// It's easier to call executeBuiltin by manipulating the stack.
+		// Wait, `executeBuiltin` expects arguments to be on the stack, and it pops them!
+		// `executeBuiltin` pops `argCount` arguments.
+		// We need to inject the method name as the FIRST argument.
+		// To do this, we can shift all arguments up by 1 and place the method string.
+		
+		// Shift arguments up by 1 on the stack
+		for i := 0; i < argCount; i++ {
+			vm.stack[vm.sp-i] = vm.stack[vm.sp-i-1]
+		}
+		// Insert the method string
+		vm.stack[vm.sp-argCount] = core.StringVal(bFn.Method)
+		vm.sp++ // We added one argument
+		
+		// Now call executeBuiltin with argCount + 1
+		err := vm.executeBuiltin(core.BuiltinID(bFn.ModuleID), argCount+1, line, col)
+		if err != nil {
+			return err
+		}
+		
+		// `executeBuiltin` pushed the result. We need to remove the callee.
+		result := vm.pop()
+		vm.pop() // remove ValBuiltinFn
+		vm.push(result)
 		return nil
 	}
 

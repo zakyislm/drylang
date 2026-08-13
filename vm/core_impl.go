@@ -61,6 +61,18 @@ func (vm *VM) SetIP(ip int) {
 	vm.ip = ip
 }
 
+func (vm *VM) Clone() core.VMCore {
+	return &VM{
+		chunk:      vm.chunk,
+		fns:        vm.fns,
+		globals:    vm.globals,
+		stack:      make([]core.Value, 4096),
+		sp:         0,
+		ip:         0,
+		asyncPools: vm.asyncPools,
+	}
+}
+
 func (vm *VM) GetChunk() *core.Chunk {
 	return vm.chunk
 }

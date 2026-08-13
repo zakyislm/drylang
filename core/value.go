@@ -20,7 +20,10 @@ const (
 	ValStructInstance = "struct_instance"
 	ValClass          = "class"
 	ValInstance       = "instance"
+	ValPipe           = "pipe"
 	ValUnknown        = "unknown"
+	ValBuiltinFn      = "builtin_fn"
+	ValBuiltinModule  = "builtin_module"
 )
 
 // Value wraps any dryLang runtime value.
@@ -91,6 +94,14 @@ func (v Value) String() string {
 	case ValInstance:
 		inst := v.Data.(*Instance)
 		return fmt.Sprintf("<instance %s>", inst.Class.Name)
+	case ValPipe:
+		return "<pipe>"
+	case ValBuiltinFn:
+		b := v.Data.(BuiltinFn)
+		return fmt.Sprintf("<builtin_fn %d.%s>", b.ModuleID, b.Method)
+	case ValBuiltinModule:
+		b := v.Data.(BuiltinModule)
+		return fmt.Sprintf("<builtin_module %d>", b.ModuleID)
 	case ValUnknown:
 		return "unknown"
 	}
@@ -123,4 +134,14 @@ type Instance struct {
 type BoundMethod struct {
 	Instance *Instance
 	Method   ClassMethod
+}
+
+type BuiltinFn struct {
+	ModuleID int
+	Method   string
+}
+
+type BuiltinModule struct {
+	ModuleID int
+	Methods  map[string]BuiltinFn
 }
