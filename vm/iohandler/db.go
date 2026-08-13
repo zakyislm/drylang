@@ -5,7 +5,25 @@ import (
 	"drylang/core"
 	"fmt"
 	"strings"
+	"sync"
 )
+
+var dbCache sync.Map
+
+// GetDB returns a cached *sql.DB for the given driver and dsn.
+func GetDB(driver, dsn string) (*sql.DB, error) {
+	key := driver + "://" + dsn
+	if cached, ok := dbCache.Load(key); ok {
+		return cached.(*sql.DB), nil
+	}
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		return nil, err
+	}
+	// By default, just store it. dbpool.go will allow configuration.
+	dbCache.Store(key, db)
+	return db, nil
+}
 
 func BuiltinDb(vm core.VMCore, args []core.Value, line, col int) (core.Value, error) {
 	var result core.Value
@@ -16,11 +34,11 @@ func BuiltinDb(vm core.VMCore, args []core.Value, line, col int) (core.Value, er
 	dsn := args[1].String()
 	query := args[2].String()
 
-	db, err := sql.Open(driver, dsn)
+	db, err := GetDB(driver, dsn)
 	if err != nil {
 		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"db open err: %v", err, line, col)
 	}
-	defer db.Close()
+
 
 	var qargs []interface{}
 	for i := 3; i < len(args); i++ {

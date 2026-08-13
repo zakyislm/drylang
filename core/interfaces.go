@@ -74,4 +74,5 @@ type VMCore interface {
 	PopFrame()
 	Errorf(format string, args ...interface{}) error
 	GetCurrentClosure() *Closure
+	Clone() VMCore
 }
