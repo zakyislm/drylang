@@ -74,6 +74,7 @@ type tryFrame struct {
 // New creates a new VM.
 func New(chunk *core.Chunk, fns []*core.CompiledFn) *VM {
 	vm := &VM{
+	return &VM{
 		chunk:      chunk,
 		fns:        fns,
 		globals:    make(map[string]core.Value),
@@ -169,6 +170,22 @@ func (vm *VM) execute(chunk *core.Chunk) error {
 		if err == nil {
 			return nil
 		}
+
+		if len(vm.tryStack) > 0 {
+			tf := vm.tryStack[len(vm.tryStack)-1]
+			if tf.frameDepth == baseDepth {
+				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+				vm.sp = tf.sp
+				vm.push(core.StringVal(err.Error()))
+				vm.ip = tf.catchIP
+				vm.chunk = chunk
+				continue
+			}
+		}
+		return err
+	}
+}
+
 
 		if len(vm.tryStack) > 0 {
 			tf := vm.tryStack[len(vm.tryStack)-1]
@@ -1312,6 +1329,8 @@ func (vm *VM) executeBuiltin(id core.BuiltinID, argCount int, line, col int) err
 		res, err := iohandler.BuiltinLog(vm, args, line, col)
 		if err != nil {
 			return vm.runtimeErr("E300", line, col, "%s", err.Error())
+		}
+		result = res
 		}
 		result = res
 
