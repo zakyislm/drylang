@@ -20,6 +20,7 @@ type ParserCore interface {
 	Advance() lexer.Token
 	Expect(typ lexer.TokenType) (lexer.Token, error)
 	Peek() lexer.Token
+	PeekAt(offset int) lexer.Token
 	Current() lexer.Token
 	Errorf(code, format string, args ...interface{}) error
 }

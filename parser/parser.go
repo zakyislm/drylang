@@ -7,16 +7,8 @@ import (
 	"drylang/lexer"
 	"fmt"
 
-	"drylang/parser/classhandler"
-	"drylang/parser/controlhandler"
-	"drylang/parser/errorhandler"
-	"drylang/parser/functionhandler"
-	"drylang/parser/loophandler"
-	"drylang/parser/modhandler"
-	"drylang/parser/structhandler"
-	"drylang/parser/typehandler"
-	"drylang/parser/varhandler"
-	"drylang/parser/exprhandler"
+	"drylang/parser/expr"
+	"drylang/parser/stmt"
 )
 
 
@@ -39,6 +31,7 @@ var precedences = map[lexer.TokenType]int{
 	lexer.TOKEN_LBRACKET: core.PREC_CALL,
 	lexer.TOKEN_DOT:      core.PREC_CALL,
 	lexer.TOKEN_QMARK_DOT: core.PREC_CALL,
+	lexer.TOKEN_ARROW:     core.PREC_CALL,
 	lexer.TOKEN_QQ:        core.PREC_COALESCE,
 }
 
@@ -61,6 +54,14 @@ func New(tokens []lexer.Token) *Parser {
 func (p *Parser) Peek() lexer.Token {
 	if p.pos+1 < len(p.tokens) {
 		return p.tokens[p.pos+1]
+	}
+	return lexer.Token{Type: lexer.TOKEN_EOF}
+}
+
+// PeekAt returns the token at the given offset from the current position.
+func (p *Parser) PeekAt(offset int) lexer.Token {
+	if p.pos+offset < len(p.tokens) {
+		return p.tokens[p.pos+offset]
 	}
 	return lexer.Token{Type: lexer.TOKEN_EOF}
 }
@@ -144,49 +145,49 @@ func (p *Parser) Parse() (*ast.Program, error) {
 func (p *Parser) ParseStatement() (ast.Stmt, error) {
 	switch p.current.Type {
 	case lexer.TOKEN_CNS:
-		return varhandler.ParseConstDecl(p)
+		return stmt.ParseConstDecl(p)
 	case lexer.TOKEN_FN:
-		return functionhandler.ParseFnDecl(p, false)
+		return stmt.ParseFnDecl(p, false)
 	case lexer.TOKEN_ASN:
 		// Async Function
 		p.Advance()
 		if p.Current().Type != lexer.TOKEN_FN {
 			return nil, p.Errorf("E105", "needs fn")
 		}
-		return functionhandler.ParseFnDecl(p, true)
+		return stmt.ParseFnDecl(p, true)
 	case lexer.TOKEN_REV:
-		return functionhandler.ParseReturn(p)
+		return stmt.ParseReturn(p)
 	case lexer.TOKEN_IF:
-		return controlhandler.ParseIf(p)
+		return stmt.ParseIf(p)
 	case lexer.TOKEN_ON:
-		return controlhandler.ParseOn(p)
+		return stmt.ParseOn(p)
 	case lexer.TOKEN_LP:
-		return loophandler.ParseLoop(p)
+		return stmt.ParseLoop(p)
 	case lexer.TOKEN_DONE:
-		return loophandler.ParseDone(p)
+		return stmt.ParseDone(p)
 	case lexer.TOKEN_CON:
-		return loophandler.ParseCon(p)
+		return stmt.ParseCon(p)
 	case lexer.TOKEN_MUL:
-		return functionhandler.ParseMulCall(p)
+		return stmt.ParseMulCall(p)
 	case lexer.TOKEN_UNI:
-		return functionhandler.ParseUniCall(p)
+		return stmt.ParseUniCall(p)
 	case lexer.TOKEN_AWT:
-		return functionhandler.ParseAwt(p)
+		return stmt.ParseAwt(p)
 	case lexer.TOKEN_TRY:
-		return errorhandler.ParseTry(p)
+		return stmt.ParseTry(p)
 	case lexer.TOKEN_ERR:
-		return errorhandler.ParseThrow(p)
+		return stmt.ParseThrow(p)
 	case lexer.TOKEN_USE:
-		return modhandler.ParseUse(p)
+		return stmt.ParseUse(p)
 	case lexer.TOKEN_PV:
-		return classhandler.ParsePrivate(p)
+		return stmt.ParsePrivate(p)
 	case lexer.TOKEN_CL:
-		return classhandler.ParseClass(p)
+		return stmt.ParseClass(p)
 	case lexer.TOKEN_QUESTION:
-		return typehandler.ParseUnknownBool(p)
+		return stmt.ParseUnknownBool(p)
 	case lexer.TOKEN_IDENT:
 		if p.Peek().Type == lexer.TOKEN_LBRACE {
-			return structhandler.ParseStruct(p)
+			return stmt.ParseStruct(p)
 		}
 		fallthrough
 	default:
@@ -201,19 +202,19 @@ func (p *Parser) SkipSemicolons() {
 }
 
 func (p *Parser) ParseExpressionOrAssign() (ast.Stmt, error) {
-	return varhandler.ParseAssignOrExpr(p)
+	return stmt.ParseAssignOrExpr(p)
 }
 
 func (p *Parser) ParseExpression(prec int) (ast.Expr, error) {
-	return exprhandler.ParseExpression(p, prec)
+	return expr.ParseExpression(p, prec)
 }
 
 func (p *Parser) ParsePrefix() (ast.Expr, error) {
-	return exprhandler.ParsePrefix(p)
+	return expr.ParsePrefix(p)
 }
 
 func (p *Parser) ParseInfix(left ast.Expr) (ast.Expr, error) {
-	return exprhandler.ParseInfix(p, left)
+	return expr.ParseInfix(p, left)
 }
 
 func (p *Parser) ParseBlock() ([]ast.Stmt, error) {

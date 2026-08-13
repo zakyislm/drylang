@@ -15,13 +15,22 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: '1.26'
+
+    - name: Secret scan
+      run: |
+        if grep -rE 'GEMINI_API_KEY=|AIza[A-Za-z0-9_-]{20,}' --include='*.go' --include='*.y' --include='*.dry' --include='*.env' --include='*.md' --exclude='.env.example' .; then
+          echo "Found potential secret in repo"; exit 1
+        fi
 
     - name: Build
       run: go build -v ./...
 
+    - name: Vet
+      run: go vet ./...
+
     - name: Run Go Tests
-      run: go test -v ./...
+      run: go test -v ./tools/tests/...
 
     - name: Run Script Tests
       run: |

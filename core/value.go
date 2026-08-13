@@ -50,10 +50,11 @@ func (v Value) String() string {
 	switch v.Type {
 	case ValNumber:
 		f := v.Data.(float64)
-		if f == math.Trunc(f) {
-			return strconv.FormatInt(int64(f), 10)
+		if math.IsInf(f, 0) || math.IsNaN(f) || f != math.Trunc(f) ||
+			f >= 9223372036854775808.0 || f < -9223372036854775808.0 {
+			return strconv.FormatFloat(f, 'f', -1, 64)
 		}
-		return strconv.FormatFloat(f, 'f', -1, 64)
+		return strconv.FormatInt(int64(f), 10)
 	case ValString:
 		return v.Data.(string)
 	case ValBool:
