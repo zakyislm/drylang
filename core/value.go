@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -47,13 +48,18 @@ type Closure struct {
 func FnVal(v *Closure) Value       { return Value{ValFn, v} }
 
 func (v Value) String() string {
+	return v.stringHelper(make(map[uintptr]bool))
+}
+
+func (v Value) stringHelper(visited map[uintptr]bool) string {
 	switch v.Type {
 	case ValNumber:
 		f := v.Data.(float64)
-		if f == math.Trunc(f) {
-			return strconv.FormatInt(int64(f), 10)
+		if math.IsInf(f, 0) || math.IsNaN(f) || f != math.Trunc(f) ||
+			f >= 9223372036854775808.0 || f < -9223372036854775808.0 {
+			return strconv.FormatFloat(f, 'f', -1, 64)
 		}
-		return strconv.FormatFloat(f, 'f', -1, 64)
+		return strconv.FormatInt(int64(f), 10)
 	case ValString:
 		return v.Data.(string)
 	case ValBool:
@@ -63,16 +69,26 @@ func (v Value) String() string {
 		return "f"
 	case ValArray:
 		arr := v.Data.([]Value)
+		ptr := reflect.ValueOf(arr).Pointer()
+		if visited[ptr] {
+			return "[Circular]"
+		}
+		visited[ptr] = true
 		parts := make([]string, len(arr))
 		for i, item := range arr {
-			parts[i] = item.String()
+			parts[i] = item.stringHelper(visited)
 		}
 		return "[" + strings.Join(parts, ", ") + "]"
 	case ValMap:
 		m := v.Data.(map[string]Value)
+		ptr := reflect.ValueOf(m).Pointer()
+		if visited[ptr] {
+			return "{Circular}"
+		}
+		visited[ptr] = true
 		parts := make([]string, 0, len(m))
 		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
+			parts = append(parts, fmt.Sprintf("%s: %s", k, val.stringHelper(visited)))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case ValFn:
@@ -83,9 +99,14 @@ func (v Value) String() string {
 		return fmt.Sprintf("<struct %s>", sd.Name)
 	case ValStructInstance:
 		m := v.Data.(map[string]Value)
+		ptr := reflect.ValueOf(m).Pointer()
+		if visited[ptr] {
+			return "{Circular Struct}"
+		}
+		visited[ptr] = true
 		parts := make([]string, 0, len(m))
 		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
+			parts = append(parts, fmt.Sprintf("%s: %s", k, val.stringHelper(visited)))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case ValClass:

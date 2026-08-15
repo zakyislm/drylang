@@ -17,15 +17,6 @@ func (vm *VM) Peek() core.Value {
 	return vm.stack[vm.sp-1]
 }
 
-func (vm *VM) SetGlobal(name string, val core.Value) {
-	vm.globals[name] = val
-}
-
-func (vm *VM) GetGlobal(name string) (core.Value, bool) {
-	val, ok := vm.globals[name]
-	return val, ok
-}
-
 func (vm *VM) SetLocal(slot int, val core.Value) {
 	vm.stack[vm.frames[len(vm.frames)-1].bp+slot] = val
 }
@@ -65,7 +56,7 @@ func (vm *VM) Clone() core.VMCore {
 	return &VM{
 		chunk:      vm.chunk,
 		fns:        vm.fns,
-		globals:    vm.globals,
+		globals:    vm.CloneGlobals(),
 		stack:      make([]core.Value, 4096),
 		sp:         0,
 		ip:         0,
