@@ -46,6 +46,7 @@ func (c *Compiler) compileClass(s *ast.ClassStmt) error {
 			Chunk:      sub.chunk,
 			Visibility: m.Visibility,
 			IsAsync:    m.IsAsync,
+			LocalNames: sub.slotNames,
 		}
 	}
 
