@@ -3,10 +3,10 @@
 DryLang uses the `lp` keyword for all looping.
 
 ## Fixed Count Loop
-Loop a specific number of times:
+Loop a specific number of times. The index variable `i` (starting at 0) is automatically injected into the loop context!
 ```rust
 lp 5 {
-    pt("hello")
+    pt("hello " + str(i)) // i = 0, 1, 2, 3, 4
 }
 ```
 
@@ -37,4 +37,11 @@ lp 10 {
     }
     pt(i)
 }
+```
+
+## Parallel Execution (mul)
+If you want to execute multiple iterations asynchronously in parallel, use the `mul` keyword. Like `lp`, `mul` also automatically injects the `i` index into its context:
+```rust
+// Spawns 10 parallel background jobs, each receiving its own `i` (0 to 9)
+mul 10 processJob(i)
 ```

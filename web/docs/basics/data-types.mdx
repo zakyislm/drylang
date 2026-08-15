@@ -22,14 +22,16 @@ raw = `no escapes here \n`
 ```
 
 ## Boolean
-Use `t` for true and `f` for false.
+Use `t` for true and `f` for false. 
+**Note:** `t` and `f` are strictly reserved boolean literals. You cannot use them as variable names, which eliminates common collisions with math or time variables.
 ```rust
 isActive = t
 isDone = f
 ```
 
-## Unknown (Null)
-The `unknown` keyword represents a null/uninitialized value.
+## Unknown (The 3rd State)
+The `unknown` keyword replaces null and undefined. It is a fundamental 3rd boolean state that evaluates to falsy in conditionals.
 ```rust
 data = unknown
+fallback = data ?? "default value"
 ```

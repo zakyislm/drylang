@@ -1,15 +1,42 @@
 # Scope & Closures
 
-DryLang uses lexical scoping. Functions can capture variables from their surrounding scope.
+dryLang uses lexical block scoping. Functions can capture variables from their surrounding scope.
+
 ```rust
 multiplier = 10
 
 fn makeAdder(x) {
-    rev => (y) {
+    rev y -> {
         rev (x + y) * multiplier
     }
 }
 
 addFive = makeAdder(5)
 pt(addFive(2)) // (5 + 2) * 10 = 70
+```
+
+## Arrow Functions and `this` Context
+Arrow functions (`->`) have a special superpower: they dynamically capture the `this` context from their parent scope. 
+
+This is incredibly useful when passing arrow functions as callbacks inside classes, ensuring you don't lose access to the instance's fields!
+
+```rust
+cl Worker {
+    prefix
+    
+    fn init(p) {
+        this.prefix = p
+    }
+
+    fn process(items) {
+        // The arrow function elegantly captures `this` from `process`
+        apply(items, item -> pt(this.prefix + item))
+    }
+}
+
+w = Worker("Item: ")
+w.process(["A", "B"])
+// Output:
+// Item: A
+// Item: B
 ```

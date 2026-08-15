@@ -15,7 +15,23 @@ score = "One hundred" // Perfectly valid
 ```
 
 ## Constants
-Use `cns` to declare a constant that cannot be reassigned.
+There are two ways to declare constants that cannot be reassigned:
+
+1. **Using the `cns` keyword:**
 ```rust
 cns PI = 3.14159
+```
+
+2. **Auto-Constants:** Any variable defined with a fully uppercase name is automatically locked as a constant. No keyword required!
+```rust
+MAX_RETRIES = 5
+MAX_RETRIES = 10 // Throws: cannot assign to cns
+```
+
+## Unknown (Null / Undefined)
+dryLang natively handles missing or unresolvable data using the `unknown` keyword, replacing null and undefined.
+
+```rust
+data = unknown
+fallback = data ?? "default value"
 ```
