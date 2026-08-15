@@ -1,0 +1,350 @@
+# dryLang Examples Reference
+
+This document provides comprehensive examples for every feature and syntax in **dryLang**.
+
+## 1. Variables and Constants
+
+```rust
+// Variables are implicitly declared on first assignment
+name = "Zaky"
+age = 17
+
+// Constants
+// 1. Using the `cns` keyword
+cns MAX_USERS = 100
+
+// 2. Auto-Constants (Any fully uppercase variable is locked as constant automatically)
+API_URL = "https://api.example.com"
+// API_URL = "http://localhost" // Throws: cannot assign to cns
+```
+
+## 2. Data Types
+
+```rust
+// Numbers (Float64)
+int_num = 42
+float_num = 3.14
+exp_num = 1e4    // 10000
+
+// Strings
+s1 = "Double Quotes"
+s2 = 'Single Quotes'
+raw = `Raw string, no \n escapes needed here`
+
+// Booleans (Strictly `t` and `f`)
+is_admin = t
+is_guest = f
+
+// Unknown (The 3rd Boolean State / Null)
+// Used when a state is unresolvable or missing.
+data = unknown
+fallback = data ?? "default value"
+
+// Unknown behaves as falsy in conditions
+if (data) {
+    pt("Truth!")
+} el {
+    pt("Falsy or unknown!") // This runs
+}
+arr = [1, 2, 3, "four", t]
+pt(arr[0])      // 1
+
+// Maps
+m = {"user": "Zaky", "age": 17}
+pt(m["user"])   // "Zaky"
+```
+
+## 3. String Interpolation
+
+```rust
+user = "Zaky"
+score = 95
+// Note: Object dot-access inside interpolation requires string concatenation,
+// but simple variables and math work natively inside ${}
+pt("Hello ${user}, your score is ${score + 5}")
+```
+
+## 4. Control Structures
+
+### `if / elif / el`
+```rust
+x = 10
+if (x > 10) {
+    pt("Greater")
+} elif (x = 10) {  // Note: Single `=` is used for comparison!
+    pt("Equal")
+} el {
+    pt("Lesser")
+}
+```
+
+### `on` (Switch statement)
+```rust
+status = 200
+on (status) {
+    200 { pt("OK") }
+    404 { pt("Not Found") }
+    500 { pt("Server Error") }
+}
+```
+
+### `lp` (Universal Loop)
+```rust
+// Counted loop (injects `i` automatically)
+lp 5 {
+    pt("Count: " + str(i)) // 0, 1, 2, 3, 4
+}
+
+// Infinite loop with `done` (break) and `con` (continue)
+lp {
+    x = rnd(10)
+    if (x = 5) { done }
+    if (x < 3) { con }
+    pt("Processing " + str(x))
+}
+```
+
+## 5. Functions
+
+### Standard `fn`
+```rust
+fn add(a, b) {
+    rev a + b   // `rev` is the return keyword
+}
+res = add(10, 20)
+```
+
+### Arrow Functions (`->`)
+```rust
+// Single parameter
+double = x -> x * 2
+
+// Multiple parameters
+multiply = (a, b) -> a * b
+
+// Block body
+complex_math = (x, y) -> {
+    z = x + y
+    rev z * 2
+}
+
+// Passing as arguments (Callbacks)
+fn apply(f, val) { rev f(val) }
+pt(apply(x -> x + 5, 10))  // 15
+```
+
+## 6. Asynchronous Concurrency
+
+```rust
+asn fn fetch_data(id) {
+    // Simulating async work
+    pt("Fetching " + str(id))
+}
+
+// 1. `mul` (Multiple/Parallel execution)
+// Spawns 10 concurrent goroutines, injects `i` (0 to 9)
+mul 10 fetch_data(i)
+
+// 2. `uni` (Unique/Single async spawn)
+uni fetch_data(99)
+
+// 3. `awt` (Await)
+// Blocks until all pending `mul` and `uni` jobs are completed
+awt
+```
+
+## 7. Structs and Classes (OOP)
+
+### Struct (Data Container)
+```rust
+Point {
+    x
+    y
+}
+p = Point(10, 20)
+pt(p.x) // 10
+```
+
+### Class with Methods
+```rust
+cl Animal {
+    name
+    fn init(n) {
+        this.name = n
+    }
+    fn speak() {
+        rev this.name + " makes a sound."
+    }
+}
+```
+
+### Inheritance (`<-`)
+```rust
+cl Dog <- Animal {
+    // Overriding parent method
+    fn speak() {
+        rev this.name + " barks!"
+    }
+}
+
+d = Dog("Rex") // Uses Animal's init
+pt(d.speak())  // "Rex barks!"
+```
+
+### Privacy (`pv`)
+```rust
+cl BankAccount {
+    pv balance           // Private field
+    pv fn auth() { ... } // Private method
+    
+    fn init() { this.balance = 0 }
+}
+
+pv cl InternalSystem {
+    // Private class. Cannot be instantiated outside the declaring module/file.
+}
+```
+
+## 8. Error Handling
+
+```rust
+try {
+    // Throw an error using `err`
+    err("Database connection failed")
+} err(e) {
+    pt("Caught exception: " + e)
+}
+```
+
+## 9. Modules
+
+```rust
+// Load a specific file
+use "utils.dry"
+
+// Load an entire directory (loads all .dry files sorted alphabetically)
+use "controllers"
+```
+
+## 10. Built-In Core Functions
+
+### String Manipulation
+```rust
+str(42)             // "42"
+num("42")           // 42
+low("ABC")          // "abc"
+cap("hello")        // "HELLO"
+trm("  x  ")        // "x"
+spl("a,b,c", ",")   // ["a","b","c"]
+j(["x","y"], "-")   // "x-y"
+mod("aaa","a","b")  // "bbb" (Replace)
+fmt("%s-%d","x",5)  // "x-5"
+len("abc")          // 3
+has("hello","ell")  // t
+```
+
+### Math
+```rust
+abs(-5)             // 5
+min(3, 9)           // 3
+max(3, 9)           // 9
+rnd(10)             // Random number 0-9
+math.sqrt(16)       // 4
+math.pow(2, 10)     // 1024
+```
+
+### Arrays and Maps
+```rust
+arr = [1, 2, 3]
+len(arr)            // 3
+add(arr, 4)         // [1,2,3,4]
+pop(arr)            // 4
+rm(arr, 1)          // [1,3] (Removes index 1)
+sort([3,1,2])       // [1,2,3]
+
+m = {"a": 1, "b": 2}
+key(m)              // ["a", "b"]
+val(m)              // [1, 2]
+has(m, "a")         // t (Check key exists)
+```
+
+### Cryptography & JWT
+```rust
+// Hashing (bcrypt, md5, sha256)
+hash.md5("abc")             // "900150983cd24fb0d6963f7d28e17f72"
+h = hash.bcrypt("password") // "$2a$10$..."
+is_valid = hash.fit("bcrypt", "password", h) // t
+
+// Encoding
+enc.b64("hello")            // "aGVsbG8="
+enc.hex("ab")               // "6162"
+
+// JWT
+token = jwt.gen({"user": "Zaky"}, "secret_key")
+payload = jwt.fit(token, "secret_key")
+```
+
+### Regular Expressions
+```rust
+rgx.find("abc123", "[0-9]+")   // ["123"]
+rgx.rep("a1b2", "[0-9]", "X")  // "aXbX"
+```
+
+### IO & File System
+```rust
+pt("Print to stdout")
+name = in("Enter name: ")     // Read from stdin
+r("config.json")              // Read file content
+w("log.txt", "Server started") // Write to file
+```
+
+### HTTP Server & Requests
+```rust
+// HTTP Request
+res = req("https://api.github.com", {"method": "G"})
+data = json(res)
+
+// HTTP Server
+fn handle_request(req) {
+    rev {"status": 200, "body": "dryLang Backend is Running"}
+}
+// Port 8080, handler, multithreading mode, 100 max concurrent connections
+op(8080, handle_request, "mul", 100)
+```
+
+### Database
+```rust
+// Query Database (SQLite, Postgres, MySQL)
+rows = db("sqlite", "data.db", "SELECT * FROM users")
+
+// Setup Connection Pool
+dbpool("postgres", "postgres://user:pass@localhost/db", 10, 2, 30)
+```
+
+### State, Cache, & Jobs
+```rust
+// In-Memory Cache (TTL)
+mem.set("api_limit", 100, 60)  // TTL 60 seconds
+val = mem.get("api_limit")
+
+// Rate Limiting
+is_allowed = rate.check("192.168.1.1", 100, 60) // 100 reqs per 60s
+
+// Cron Jobs
+cron.add("* * * * *", () -> { pt("Runs every minute") })
+
+// Background Jobs
+job.push(fn_name, arg1, arg2)
+```
+
+### Validation & Misc
+```rust
+valid.mail("test@example.com")  // t
+valid.num("42")                 // t
+
+tmpl.render("Hello {{.name}}", {"name": "Zaky"}) // Template engine
+
+sys.os()                        // OS Info
+now()                           // Unix Timestamp ms
+date()                          // Structured Date map
+```
