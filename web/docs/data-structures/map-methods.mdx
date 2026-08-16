@@ -1,0 +1,32 @@
+# Map Methods
+
+Maps (also known as dictionaries or objects) have specific built-in methods for extraction and checks.
+
+## Get Keys (`key`)
+Extract all keys from a map into an array.
+```rust
+m = {"a": 1, "b": 2}
+key(m) // ["a", "b"]
+```
+
+## Get Values (`val`)
+Extract all values from a map into an array.
+```rust
+m = {"a": 1, "b": 2}
+val(m) // [1, 2]
+```
+
+## Check if Key Exists (`has`)
+Check if a specific key exists within a map. Returns a boolean.
+```rust
+m = {"name": "Zaky"}
+has(m, "name") // t
+has(m, "age")  // f
+```
+
+## Length (`len`)
+Get the number of key-value pairs in a map.
+```rust
+m = {"a": 1, "b": 2}
+len(m) // 2
+```

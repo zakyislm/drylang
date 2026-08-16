@@ -1,0 +1,13 @@
+# HTML Template Rendering (`tmpl.render`)
+
+dryLang contains a native HTML template engine, highly optimized for returning dynamic server-side generated responses inside the `op` web server.
+
+```rust
+html = tmpl.render("views/home.html", {"title": "Hello", "count": 5})
+```
+
+Inside your `home.html`, variables are safely injected without the need for bloated JS frameworks:
+```html
+<h1>{{.title}}</h1>
+<p>Count is {{.count}}</p>
+```

@@ -1,0 +1,17 @@
+# RPC (`rpc`)
+
+For microservices, dryLang has built-in Remote Procedure Calls.
+
+## Start RPC Server
+```rust
+fn multiply(a, b) { rev a * b }
+
+rpc.serve("localhost:9000", {"mul": multiply})
+```
+
+## Call RPC Client
+```rust
+// Calls the remote "mul" function
+res = rpc.call("localhost:9000", "mul", [5, 5])
+pt(res) // 25
+```

@@ -1,0 +1,27 @@
+# Numbers
+
+In dryLang, there is only one numeric type under the hood: a 64-bit float (`Float64`). This simplifies math and eliminates confusing casting issues between integers and floats.
+
+## Integer & Float Literals
+
+```rust
+int_num = 42
+float_num = 3.14
+```
+
+## Exponent Notation
+
+You can also use exponent notation for very large or very small numbers.
+
+```rust
+exp_num = 1e4       // 10000
+small_num = 2.5e-3  // 0.0025
+```
+
+dryLang also safely handles large raw number literals without integer overflow garbage, interpreting them safely within float bounds.
+
+```rust
+huge = 99999999999999999999 // Handled gracefully as ~1e20
+```
+
+> **Warning:** Extremely large exponent literals like `1e400` will result in an overflow error (`E110 bad number`) and will be rejected.

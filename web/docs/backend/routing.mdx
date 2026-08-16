@@ -1,0 +1,11 @@
+# Routing (`rt`)
+
+While `op()` takes a single root handler by default, you can use the `rt` native router for complex paths.
+
+```rust
+rt.add("/home", () -> { rev {"body": "Home"} })
+rt.add("/api", () -> { rev {"body": "API"} })
+
+// Use rt.serve as the master handler for op()
+op(8080, rt.serve, "mul", 100)
+```

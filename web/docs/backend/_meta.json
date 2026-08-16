@@ -1,0 +1,10 @@
+{
+  "index": "Overview",
+  "http-request": "HTTP Request (req)",
+  "http-server": "HTTP Server (op)",
+  "routing": "Routing (rt)",
+  "websockets": "WebSockets (ws)",
+  "rpc": "RPC",
+  "database": "Database Queries",
+  "database-pool": "Connection Pooling"
+}

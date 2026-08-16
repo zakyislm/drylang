@@ -1,0 +1,16 @@
+# Async & Concurrency
+
+dryLang treats concurrency as a first-class citizen using Goroutines under the hood, but abstracts the complexity away.
+
+You don't need to manage channels or threads manually.
+
+## The `asn` keyword
+To define a function that runs asynchronously, prefix it with `asn`.
+
+```rust
+asn fn worker(id) {
+    pt("Worker ${id} is running")
+}
+```
+
+Once defined as `asn`, it can be launched concurrently using either `mul` (multiple) or `uni` (single), and synced with `awt`.

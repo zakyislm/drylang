@@ -1,0 +1,14 @@
+# JWT (`jwt`)
+
+dryLang can natively generate and decode JSON Web Tokens without any external libraries.
+
+## Generate Token (`jwt.gen`)
+```rust
+token = jwt.gen({"user": "Zaky"}, "secret_key")
+```
+
+## Decode/Validate Token (`jwt.fit`)
+```rust
+payload = jwt.fit(token, "secret_key")
+// payload is {"user": "Zaky"}
+```

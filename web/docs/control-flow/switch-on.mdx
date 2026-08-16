@@ -1,0 +1,15 @@
+# Switch (`on`)
+
+Instead of verbose `switch` and `case` statements, dryLang uses the extremely compact `on` block.
+
+```rust
+v = 2
+
+on (v) {
+    0 { pt("zero") }
+    1 { pt("one") }
+    2 { pt("two") }
+}
+```
+
+This functions identically to a switch statement but saves you from writing `case`, `break`, or `default` repeatedly.

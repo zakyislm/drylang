@@ -1,0 +1,9 @@
+{
+  "index": "Overview",
+  "string-methods": "String Methods",
+  "math-methods": "Math Methods",
+  "regex": "Regular Expressions",
+  "crypto-hash": "Crypto & Hashing",
+  "crypto-jwt": "JWT",
+  "io": "I/O & File System"
+}

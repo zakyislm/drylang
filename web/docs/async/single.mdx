@@ -1,0 +1,14 @@
+# Single Async Execution (`uni`)
+
+If you just want to run an async function in the background a single time, use the `uni` keyword.
+
+```rust
+asn fn process_background_task(data) {
+    pt("Processing ${data}")
+}
+
+// Runs once in the background
+uni process_background_task("File1")
+```
+
+`uni` acts like a standard fire-and-forget background worker.

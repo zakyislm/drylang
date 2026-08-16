@@ -1,0 +1,19 @@
+# JSON Parsing & Formatting
+
+The `json` module makes dealing with APIs incredibly straightforward.
+
+## Parse JSON to Map/Array
+If you pass a JSON string to `json()`, it converts it into a native map or array.
+```rust
+j_str = '{"name": "Zaky", "age": 20}'
+data = json(j_str)
+pt(data["name"]) // "Zaky"
+```
+
+## Stringify Map/Array to JSON
+If you pass a map or array to `json()`, it converts it back into a string.
+```rust
+obj = {"status": "ok"}
+str_out = json(obj)
+pt(str_out) // '{"status":"ok"}'
+```

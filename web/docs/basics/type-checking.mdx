@@ -1,0 +1,17 @@
+# Type Checking (`get`)
+
+dryLang uses dynamic typing, but you can always check the underlying type of a variable using the `get` built-in function.
+
+```rust
+a = 10
+pt(get(a)) // "Float64"
+
+b = "hello"
+pt(get(b)) // "String"
+
+c = [1, 2, 3]
+pt(get(c)) // "Array"
+
+d = {"k": "v"}
+pt(get(d)) // "Map"
+```

@@ -1,0 +1,42 @@
+# Booleans & Unknown
+
+Logic in dryLang is kept incredibly short. 
+
+## Booleans (`t` and `f`)
+
+There is no `true` or `false` keyword. Instead, use the 1-character equivalents:
+- `t` (true)
+- `f` (false)
+
+```rust
+is_admin = t
+is_guest = f
+```
+
+## The 3rd State: `unknown`
+
+Sometimes a state is missing, unresolvable, or essentially "null". In dryLang, this is represented by the `unknown` keyword.
+
+```rust
+data = unknown
+```
+
+### Truthiness of `unknown`
+`unknown` behaves as falsy in conditions.
+
+```rust
+if (data) {
+    pt("This won't run")
+} el {
+    pt("Falsy or unknown!") // This runs
+}
+```
+
+### Null Coalescing (`??`)
+You can use the `??` operator to provide a fallback value if a variable is `unknown`.
+
+```rust
+a = unknown
+fallback = a ?? "default value"
+pt(fallback) // "default value"
+```

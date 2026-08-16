@@ -1,0 +1,11 @@
+# Sessions (`sess.set`)
+
+dryLang provides a robust session manager out of the box.
+
+```rust
+// Set 'user' attribute to 'zaky' for session 'sid123', valid for 3600 seconds
+sess.set("sid123", "user", "zaky", 3600)
+
+// Retrieve the session variable
+username = sess.get("sid123", "user")
+```

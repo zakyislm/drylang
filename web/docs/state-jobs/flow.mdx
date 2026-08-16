@@ -1,0 +1,10 @@
+# Flow Management (`flow`)
+
+You can manage strict state machines natively.
+
+```rust
+flow.create("order_123", "new")
+flow.transition("order_123", "paid")
+
+state = flow.get("order_123") // "paid"
+```

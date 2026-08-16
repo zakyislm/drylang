@@ -1,0 +1,24 @@
+# Strings
+
+Strings are used to store textual data. **dryLang** offers three different string literals to fit any situation.
+
+## 1. Double Quotes
+Standard strings.
+```rust
+s1 = "Hello, world"
+```
+
+## 2. Single Quotes
+Identical to double quotes, useful if your string contains double quotes inside.
+```rust
+s2 = 'She said "hello"'
+```
+
+## 3. Raw Strings (Backticks)
+Raw strings ignore escape sequences (like `\n`). They are evaluated exactly as written, and can easily span multiple lines.
+
+```rust
+raw = `This is a raw string.
+Newlines and \n are not processed.
+They are stored exactly as you type them.`
+```

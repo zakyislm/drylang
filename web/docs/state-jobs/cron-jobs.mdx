@@ -1,0 +1,10 @@
+# Cron Jobs (`cron.add`)
+
+You can schedule repetitive background tasks using standard Cron string syntax. The tasks run completely detached in the background.
+
+```rust
+// Runs every minute
+cron.add("* * * * *", () -> { 
+    pt("A minute has passed!") 
+})
+```

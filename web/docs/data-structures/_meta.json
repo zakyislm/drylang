@@ -1,0 +1,11 @@
+{
+  "index": "Overview",
+  "arrays": "Arrays",
+  "array-methods": "Array Methods",
+  "maps": "Maps (Dictionaries)",
+  "map-methods": "Map Methods",
+  "structs": "Structs",
+  "classes": "Classes (OOP)",
+  "inheritance": "Inheritance",
+  "private-members": "Private Members"
+}

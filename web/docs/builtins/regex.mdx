@@ -1,0 +1,15 @@
+# Regular Expressions (`rgx`)
+
+The `rgx` namespace handles regular expressions cleanly.
+
+## Find Matches (`rgx.find`)
+Extracts all strings that match the pattern into an array.
+```rust
+rgx.find("abc123def", "[0-9]+") // ["123"]
+```
+
+## Replace with Regex (`rgx.rep`)
+Replaces matching patterns with a new string.
+```rust
+rgx.rep("a1b2", "[0-9]", "X") // "aXbX"
+```

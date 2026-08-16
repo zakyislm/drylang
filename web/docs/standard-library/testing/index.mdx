@@ -1,0 +1,22 @@
+# Testing Framework (`test`)
+
+dryLang has a zero-dependency internal unit-testing runner.
+
+## Writing Tests
+Tests are defined anywhere in your `.dry` files using the `test` block.
+```rust
+fn add(a, b) { rev a + b }
+
+test "Addition Logic" {
+    res = add(2, 2)
+    if (res != 4) {
+        die("Test failed")
+    }
+}
+```
+
+## Running Tests
+Run the standard CLI with the `-test` flag to execute all test blocks in the file and ignore normal execution.
+```bash
+dry -test script.dry
+```

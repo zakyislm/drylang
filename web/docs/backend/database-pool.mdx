@@ -1,0 +1,17 @@
+# Database Connection Pooling (`dbpool`)
+
+For production environments, opening a new database connection for every query is extremely slow. 
+
+Instead, configure a connection pool globally using `dbpool` when your application starts.
+
+```rust
+// Engine: postgres
+// DSN: postgres://user:pass@localhost/db
+// Max Open Conns: 10
+// Max Idle Conns: 2
+// Conn Max Lifetime (Minutes): 30
+
+dbpool("postgres", "postgres://user:pass@localhost/db", 10, 2, 30)
+```
+
+Once the pool is established, any subsequent `db()` calls will automatically utilize the configured pool.

@@ -1,0 +1,39 @@
+# Array Methods
+
+dryLang provides simple and powerful built-in functions to manipulate arrays.
+
+## Length (`len`)
+Get the number of elements in an array.
+```rust
+len([1, 2, 3]) // 3
+```
+
+## Add to Array (`add`)
+Append a new element to the end of the array.
+```rust
+arr = [1, 2]
+add(arr, 3) // [1, 2, 3]
+```
+
+## Pop from Array (`pop`)
+Remove and return the last element from the array.
+```rust
+arr = [1, 2, 3]
+last = pop(arr) // 3
+// arr is now [1, 2]
+```
+
+## Remove by Index (`rm`)
+Remove an element at a specific index.
+```rust
+arr = ["a", "b", "c"]
+rm(arr, 1) // Removes "b"
+// arr is now ["a", "c"]
+```
+
+## Sort Array (`sort`)
+Sort an array in ascending order.
+```rust
+arr = [3, 1, 2]
+sort(arr) // [1, 2, 3]
+```
