@@ -164,5 +164,6 @@ type ClassMethod struct {
 	Chunk      *Chunk
 	Visibility string
 	IsAsync    bool
+	LocalNames map[int]string
 }
 

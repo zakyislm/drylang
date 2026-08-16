@@ -3,6 +3,7 @@ package data
 import (
 	"drylang/core"
 	"encoding/json"
+	"reflect"
 )
 
 func BuiltinJson(vm core.VMCore, args []core.Value, line, col int) (core.Value, error) {
@@ -21,7 +22,7 @@ func BuiltinJson(vm core.VMCore, args []core.Value, line, col int) (core.Value, 
 	}
 
 	// Stringify to JSON
-	raw := valueToInterface(args[0])
+	raw := valueToInterface(args[0], make(map[uintptr]bool))
 	bytes, err := json.Marshal(raw)
 	if err != nil {
 		return core.UnknownValue, vm.Errorf("E300 at %d:%d: "+"json stringify fail: %v", err, line, col)
@@ -29,7 +30,7 @@ func BuiltinJson(vm core.VMCore, args []core.Value, line, col int) (core.Value, 
 	return core.StringVal(string(bytes)), nil
 }
 
-func valueToInterface(v core.Value) interface{} {
+func valueToInterface(v core.Value, visited map[uintptr]bool) interface{} {
 	switch v.Type {
 	case core.ValNumber:
 		return v.Data.(float64)
@@ -39,16 +40,26 @@ func valueToInterface(v core.Value) interface{} {
 		return v.Data.(bool)
 	case core.ValArray:
 		arr := v.Data.([]core.Value)
+		ptr := reflect.ValueOf(arr).Pointer()
+		if visited[ptr] {
+			return nil // json.Marshal doesn't support recursive structures, fallback to null
+		}
+		visited[ptr] = true
 		res := make([]interface{}, len(arr))
 		for i, item := range arr {
-			res[i] = valueToInterface(item)
+			res[i] = valueToInterface(item, visited)
 		}
 		return res
 	case core.ValMap:
 		m := v.Data.(map[string]core.Value)
+		ptr := reflect.ValueOf(m).Pointer()
+		if visited[ptr] {
+			return nil
+		}
+		visited[ptr] = true
 		res := make(map[string]interface{}, len(m))
 		for k, item := range m {
-			res[k] = valueToInterface(item)
+			res[k] = valueToInterface(item, visited)
 		}
 		return res
 	default:

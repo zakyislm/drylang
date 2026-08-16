@@ -23,7 +23,12 @@ func (a *analyzer) analyzeFnBody(params []string, body []ast.Stmt, isAsync bool)
 	a.inFn = true
 	a.inAsync = isAsync
 
+	seenParams := make(map[string]bool)
 	for _, p := range params {
+		if seenParams[p] {
+			return a.errorf(0, 0, "duplicate parameter")
+		}
+		seenParams[p] = true
 		a.declare(p, 0, 0, false, true)
 	}
 

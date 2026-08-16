@@ -17,6 +17,7 @@ func Analyze(prog *ast.Program) error {
 		privates:       make(map[string]map[string]bool),
 		privateClasses: make(map[string]bool),
 		instances:      make(map[string]string),
+		classMethods:   make(map[string]map[string]bool),
 	}
 
 	for _, stmt := range prog.Stmts {
@@ -70,6 +71,7 @@ type analyzer struct {
 	privates       map[string]map[string]bool // className -> private field/method names
 	privateClasses map[string]bool            // className is private (pv cl)
 	instances      map[string]string          // variable name -> class name
+	classMethods   map[string]map[string]bool // className -> method names
 }
 
 func (a *analyzer) declare(name string, line, col int, isConst, isParam bool) {

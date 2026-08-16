@@ -183,7 +183,7 @@ func (vm *VM) callClass(callee core.Value, argCount, line, col int, chunk *core.
 
 		frame := callFrame{
 			closure: &core.Closure{
-				Fn: &core.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount},
+				Fn: &core.CompiledFn{Chunk: initM.Chunk, Name: "init", ParamCount: argCount, LocalNames: initM.LocalNames},
 				Env: make(map[string]core.Value),
 			},
 			ip:    vm.ip,
@@ -228,7 +228,7 @@ func (vm *VM) callBoundMethod(callee core.Value, argCount, line, col int, chunk 
 
 	frame := callFrame{
 		closure: &core.Closure{
-			Fn: &core.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount},
+			Fn: &core.CompiledFn{Chunk: bound.Method.Chunk, Name: "<method>", ParamCount: argCount, LocalNames: bound.Method.LocalNames},
 			Env: make(map[string]core.Value),
 		},
 		ip:    vm.ip,

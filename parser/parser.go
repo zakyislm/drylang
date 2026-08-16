@@ -36,9 +36,10 @@ var precedences = map[lexer.TokenType]int{
 }
 
 type Parser struct {
-	tokens  []lexer.Token
-	pos     int
-	current lexer.Token
+	tokens     []lexer.Token
+	pos        int
+	current    lexer.Token
+	BlockDepth int
 }
 
 var _ core.ParserCore = (*Parser)(nil)
@@ -79,6 +80,10 @@ func (p *Parser) Advance() lexer.Token {
 
 func (p *Parser) Current() lexer.Token {
 	return p.current
+}
+
+func (p *Parser) GetBlockDepth() int {
+	return p.BlockDepth
 }
 
 func errorCodeForMissingToken(typ lexer.TokenType) string {
@@ -223,6 +228,8 @@ func (p *Parser) ParseBlock() ([]ast.Stmt, error) {
 	}
 	p.SkipSemicolons()
 
+	p.BlockDepth++
+
 	var stmts []ast.Stmt
 	for p.current.Type != lexer.TOKEN_RBRACE && p.current.Type != lexer.TOKEN_EOF {
 		stmt, err := p.ParseStatement()
@@ -234,6 +241,8 @@ func (p *Parser) ParseBlock() ([]ast.Stmt, error) {
 		}
 		p.SkipSemicolons()
 	}
+	
+	p.BlockDepth--
 
 	if _, err := p.Expect(lexer.TOKEN_RBRACE); err != nil {
 		return nil, err

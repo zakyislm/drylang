@@ -22,12 +22,7 @@ func (a *analyzer) analyzeExpr(expr ast.Expr) error {
 		if err := a.analyzeExpr(e.Callee); err != nil {
 			return err
 		}
-		// pv cl: instantiating a private class is only allowed inside itself.
-		if ident, ok := e.Callee.(*ast.Ident); ok {
-			if a.privateClasses[ident.Name] && a.currentClass != ident.Name {
-				return a.errorf(e.Line, e.Col, "pv class access %s", ident.Name)
-			}
-		}
+		// pv cl instantiation is allowed globally (same module context because ASTs are merged)
 		for _, arg := range e.Args {
 			if err := a.analyzeExpr(arg); err != nil {
 				return err

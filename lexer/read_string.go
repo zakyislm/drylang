@@ -112,6 +112,17 @@ func (l *Lexer) nextInterpToken() (Token, error) {
 
 	ch := l.peek()
 
+	if ch == '"' || ch == '\'' {
+		return l.readString(ch)
+	}
+	if ch == '`' {
+		return l.readRawString()
+	}
+	if ch == '.' {
+		l.advance()
+		return l.makeToken(TOKEN_DOT, ".", l.line, l.col), nil
+	}
+
 	if unicode.IsDigit(ch) {
 		return l.readNumber()
 	}

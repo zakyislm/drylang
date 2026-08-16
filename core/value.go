@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -47,6 +48,10 @@ type Closure struct {
 func FnVal(v *Closure) Value       { return Value{ValFn, v} }
 
 func (v Value) String() string {
+	return v.stringHelper(make(map[uintptr]bool))
+}
+
+func (v Value) stringHelper(visited map[uintptr]bool) string {
 	switch v.Type {
 	case ValNumber:
 		f := v.Data.(float64)
@@ -64,16 +69,26 @@ func (v Value) String() string {
 		return "f"
 	case ValArray:
 		arr := v.Data.([]Value)
+		ptr := reflect.ValueOf(arr).Pointer()
+		if visited[ptr] {
+			return "[Circular]"
+		}
+		visited[ptr] = true
 		parts := make([]string, len(arr))
 		for i, item := range arr {
-			parts[i] = item.String()
+			parts[i] = item.stringHelper(visited)
 		}
 		return "[" + strings.Join(parts, ", ") + "]"
 	case ValMap:
 		m := v.Data.(map[string]Value)
+		ptr := reflect.ValueOf(m).Pointer()
+		if visited[ptr] {
+			return "{Circular}"
+		}
+		visited[ptr] = true
 		parts := make([]string, 0, len(m))
 		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
+			parts = append(parts, fmt.Sprintf("%s: %s", k, val.stringHelper(visited)))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case ValFn:
@@ -84,9 +99,14 @@ func (v Value) String() string {
 		return fmt.Sprintf("<struct %s>", sd.Name)
 	case ValStructInstance:
 		m := v.Data.(map[string]Value)
+		ptr := reflect.ValueOf(m).Pointer()
+		if visited[ptr] {
+			return "{Circular Struct}"
+		}
+		visited[ptr] = true
 		parts := make([]string, 0, len(m))
 		for k, val := range m {
-			parts = append(parts, fmt.Sprintf("%s: %s", k, val.String()))
+			parts = append(parts, fmt.Sprintf("%s: %s", k, val.stringHelper(visited)))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case ValClass:

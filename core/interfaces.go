@@ -23,6 +23,7 @@ type ParserCore interface {
 	PeekAt(offset int) lexer.Token
 	Current() lexer.Token
 	Errorf(code, format string, args ...interface{}) error
+	GetBlockDepth() int
 }
 
 // CompilerCore defines the interface for the main compiler.

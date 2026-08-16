@@ -8,6 +8,7 @@ import (
 
 func ParseMapLit(p core.ParserCore) (ast.Expr, error) {
 	tok := p.Advance() // Consume '{'
+	p.SkipSemicolons()
 	keys := []ast.Expr{}
 	values := []ast.Expr{}
 
@@ -34,6 +35,7 @@ func ParseMapLit(p core.ParserCore) (ast.Expr, error) {
 
 		for p.Current().Type == lexer.TOKEN_COMMA {
 			p.Advance() // Consume ','
+			p.SkipSemicolons()
 			if p.Current().Type == lexer.TOKEN_RBRACE {
 				break
 			}
