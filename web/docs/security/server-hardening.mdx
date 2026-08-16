@@ -1,0 +1,14 @@
+# Server Hardening
+
+dryLang's native HTTP server (`op`) comes pre-hardened for production.
+
+## Graceful Shutdown
+When the process receives `SIGINT` or `SIGTERM`, the HTTP server initiates a 10-second graceful shutdown timeout, allowing pending connections to finish smoothly before terminating.
+
+## Timeout Protection
+The server enforces strict built-in limits to mitigate Slow-Loris attacks:
+- **Read Timeout:** 10s
+- **Header Timeout:** 5s
+- **Write Timeout:** 10s
+- **Idle Timeout:** 60s
+- **Max Header Size:** 1MB

@@ -9,6 +9,25 @@ fn greet(name) {
 greet("Zaky")
 ```
 
+> **Note:** dryLang strictly prevents defining multiple parameters with the same name. `fn add(a, a)` will throw a compile-time error.
+
+## Anonymous Functions (Arrow Syntax)
+dryLang does not support traditional anonymous functions (like `fn() {}`). Instead, we strictly enforce "one way to do things" using **Arrow Functions** (`->`).
+
+```rust
+// Single parameter
+double = x -> x * 2
+
+// Multiple parameters
+add = (a, b) -> a + b
+
+// Block body
+complex_math = (x, y) -> {
+    z = x + y
+    rev z * 2
+}
+```
+
 ## Returning Values
 Use `rev` to return a value from a function.
 ```rust

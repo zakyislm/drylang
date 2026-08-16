@@ -1,0 +1,13 @@
+# Database Queries (`db`)
+
+Querying a database in dryLang is incredibly short. dryLang natively supports SQLite, Postgres, and MySQL.
+
+```rust
+rows = db("sqlite", "data.db", "SELECT * FROM users")
+```
+
+The `db` function returns the result as an array of maps (objects), allowing you to immediately access data cleanly.
+
+```rust
+pt(rows[0]["username"])
+```

@@ -1,0 +1,15 @@
+# Modules (`use`)
+
+dryLang allows you to import external files or entire folders cleanly using the `use` keyword.
+
+## Import a Single File
+```rust
+use "helpers.dry"
+```
+
+## Import an Entire Folder
+When you `use` a folder, dryLang automatically loads all `.dry` files inside it, sorted alphabetically.
+
+```rust
+use "controllers"
+```

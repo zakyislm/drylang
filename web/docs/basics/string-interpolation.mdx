@@ -1,0 +1,18 @@
+# String Interpolation
+
+dryLang supports clean and readable string interpolation using the `${}` syntax.
+
+You can embed variables and even simple mathematical expressions directly inside any string.
+
+```rust
+user = "Zaky"
+score = 95
+
+// Injecting variables directly
+pt("Hello ${user}!")
+
+// Injecting expressions
+pt("Your score next year will be ${score + 5}")
+```
+
+> **Note:** Object dot-access (like `user.name`) inside interpolation requires string concatenation instead of `${}`. But for simple variables and math, interpolation works natively.

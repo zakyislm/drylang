@@ -1,0 +1,23 @@
+# Sandbox Configuration
+
+Dangerous operations are gated behind environment variables.
+
+| Env Variable | Effect |
+| --- | --- |
+| `DRY_ALLOW_CMD=echo,cat` | Only allows `cmd` / `sys.run` to execute these specific commands. |
+| `DRY_ALLOW_DB=1` | Unlocks the `db` and `dbpool` database functions. |
+| `DRY_ALLOW_URL=api.example.com` | Unlocks `req` to only call the specified host. |
+| `DRY_CORS_ORIGIN=https://app.example.com` | Sets CORS headers natively for the `op` web server. |
+
+## Example Usage
+
+If you run a script normally:
+```bash
+dry script.dry
+```
+If the script contains `cmd("rm -rf /")`, it will automatically crash with `cmd denied`.
+
+To unlock it specifically during development:
+```bash
+DRY_ALLOW_CMD=* DRY_ALLOW_DB=1 dry script.dry
+```

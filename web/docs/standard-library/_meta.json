@@ -1,0 +1,8 @@
+{
+  "json": "JSON Parser",
+  "system": "System (OS, Env)",
+  "validation": "Validation",
+  "templates": "Templates",
+  "cli": "CLI Flags",
+  "testing": "Testing"
+}

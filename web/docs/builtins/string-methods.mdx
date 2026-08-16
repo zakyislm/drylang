@@ -1,0 +1,53 @@
+# String Methods
+
+dryLang provides core string manipulation directly natively.
+
+## Convert to String (`str`)
+```rust
+str(42) // "42"
+```
+
+## Convert to Number (`num`)
+```rust
+num("42") // 42
+```
+
+## Lowercase (`low`)
+```rust
+low("ABC") // "abc"
+```
+
+## Capitalize/Uppercase (`cap`)
+```rust
+cap("hello") // "HELLO"
+```
+
+## Trim (`trm`)
+Removes surrounding whitespace.
+```rust
+trm("  x  ") // "x"
+```
+
+## Split (`spl`)
+Splits a string by a delimiter into an array.
+```rust
+spl("a,b,c", ",") // ["a", "b", "c"]
+```
+
+## Join (`j`)
+Joins an array of strings.
+```rust
+j(["x", "y"], "-") // "x-y"
+```
+
+## Replace/Modify (`mod`)
+Replaces occurrences of a substring.
+```rust
+mod("aaa", "a", "b") // "bbb"
+```
+
+## Format (`fmt`)
+Standard formatting.
+```rust
+fmt("%s-%d", "x", 5) // "x-5"
+```

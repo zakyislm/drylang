@@ -1,0 +1,13 @@
+# HTTP Request (`req`)
+
+Making outgoing HTTP requests in dryLang is done via the `req` built-in function.
+
+```rust
+res = req("https://api.github.com", {"method": "G"})
+
+// Parsing the JSON response
+data = json(res)
+pt(data)
+```
+
+The second argument is a configuration map where you can define `method`, `body`, headers, etc.

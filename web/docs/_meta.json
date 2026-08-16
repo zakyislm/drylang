@@ -1,0 +1,15 @@
+{
+  "index": "Introduction",
+  "getting-started": "Getting Started",
+  "basics": "Basics",
+  "control-flow": "Control Flow",
+  "functions": "Functions",
+  "data-structures": "Data Structures & OOP",
+  "async": "Async & Concurrency",
+  "builtins": "Built-ins",
+  "standard-library": "Standard Library",
+  "backend": "Web & Backend",
+  "state-jobs": "State & Jobs",
+  "modules": "Modules",
+  "security": "Security"
+}

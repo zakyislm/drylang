@@ -1,0 +1,25 @@
+# Break and Continue (`done` / `con`)
+
+Within loops, you often need to stop the loop entirely or skip to the next iteration.
+
+## Break (`done`)
+
+Use `done` to immediately exit the current loop.
+
+```rust
+lp 10 {
+    if (i > 5) { done }
+    pt("Iteration ${i}") // Stops at 5
+}
+```
+
+## Continue (`con`)
+
+Use `con` to skip the rest of the current iteration and move to the next one.
+
+```rust
+lp 10 {
+    if (i = 2) { con }
+    pt("Iteration ${i}") // Skips 2
+}
+```

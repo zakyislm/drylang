@@ -1,0 +1,14 @@
+# Background Jobs (`job.push`)
+
+If you want to queue a task to run in the background (similar to Celery or Sidekiq but completely natively), use `job.push`.
+
+```rust
+fn process_image(img_id, filter) {
+    // Heavy processing...
+}
+
+// Push to the background queue
+job.push(process_image, 101, "grayscale")
+```
+
+The job queue is processed by the internal runtime workers asynchronously.

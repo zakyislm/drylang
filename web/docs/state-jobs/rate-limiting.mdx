@@ -1,0 +1,14 @@
+# Rate Limiting (`rate.check`)
+
+You can instantly rate limit any action (such as API endpoints) based on an IP address or identifier.
+
+```rust
+// Allow max 100 requests per 60 seconds for this IP
+is_allowed = rate.check("192.168.1.1", 100, 60)
+
+if (is_allowed) {
+    pt("Request granted")
+} el {
+    pt("Too many requests!")
+}
+```

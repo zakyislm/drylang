@@ -1,0 +1,15 @@
+# Validation (`valid`)
+
+Common data validations are natively bundled.
+
+## Validate Email
+```rust
+is_valid = valid.mail("user@test.com") // t
+```
+
+## Validate Numeric Strings
+Checks if a string can safely be converted to a number without errors.
+```rust
+is_num = valid.num("123.45") // t
+not_num = valid.num("123a") // f
+```

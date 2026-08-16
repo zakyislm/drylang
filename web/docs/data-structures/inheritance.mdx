@@ -19,3 +19,6 @@ cl Dog <- Animal {
 dog = Dog()
 pt(dog.speak()) // "Woof!"
 ```
+
+## Circular Inheritance Prevention
+dryLang strictly guards against circular inheritance (e.g., `A` inherits `B`, and `B` inherits `A`). If you attempt to define a circular inheritance chain, the compiler will gracefully block it and throw a `CompileError`.

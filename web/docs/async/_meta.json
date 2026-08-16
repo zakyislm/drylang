@@ -1,0 +1,7 @@
+{
+  "index": "Introduction (asn)",
+  "parallel": "Multiple Parallel (mul)",
+  "single": "Single Async (uni)",
+  "await": "Await Sync (awt)",
+  "pipe": "Data Streaming (pipe)"
+}

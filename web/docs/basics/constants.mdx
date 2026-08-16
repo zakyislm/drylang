@@ -1,0 +1,25 @@
+# Constants
+
+Constants are variables whose values cannot be changed after they are first initialized. In **dryLang**, there are two ways to define constants.
+
+## 1. Using the `cns` Keyword
+
+You can explicitly declare a constant by prefixing it with the `cns` keyword.
+
+```rust
+cns MAX_USERS = 100
+cns API_URL = "https://api.example.com"
+```
+
+## 2. Auto-Constants (Full Uppercase)
+
+As part of the **Write Less Get More** philosophy, **dryLang** provides Auto-Constants. Any variable declared with fully uppercase letters is **automatically locked** as a constant. You don't even need to use `cns`.
+
+```rust
+API_URL = "https://api.example.com"
+
+// The following line will throw: cannot assign to cns
+// API_URL = "http://localhost" 
+```
+
+> **Note:** You can also use `cns UPPERCASE = ...` to be explicit, but it's redundant. Full uppercase names are strictly constants no matter what!

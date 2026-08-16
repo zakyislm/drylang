@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { decompressFromEncodedURIComponent } from 'lz-string'
 
 import Link from 'next/link'
 import { FileNode } from '@/components/vcom/types'
@@ -9,12 +10,12 @@ import { Terminal } from '@/components/vcom/Terminal'
 import { Play } from 'iconoir-react'
 
 const PRESETS = [
-  { id: '1', name: 'hello_world', content: '// simple hello world\npt "hello world"' },
-  { id: '2', name: 'variables', content: '// testing variables\nx = 10\ny = 20\npt x + y' },
-  { id: '3', name: 'functions', content: '// basic function\nfn add(a, b) {\n  rev a + b\n}\n\npt add(5, 7)' },
-  { id: '4', name: 'arrays_and_loops', content: '// loops and arrays\narr = [1, 2, 3]\nidx = 0\nlp len(arr) {\n  pt "val: ${arr[idx]}"\n  idx = idx + 1\n}' },
-  { id: '5', name: 'structs', content: '// using structs\nuser { name age }\nu = user("Zaky", 17)\npt u.name\npt u.age' },
-  { id: '6', name: 'error_handling', content: '// try-catch error handling\ntry {\n  err "something went wrong"\n} err(e) {\n  pt "Caught error: ${e}"\n}' },
+  { id: '1', name: 'hello_world', content: '// Simple hello world\npt("hello world!")' },
+  { id: '2', name: 'variables', content: '// Variables and constants\ncns MAX = 100\nscore = 50\npt("Score: ${score}")' },
+  { id: '3', name: 'functions', content: '// Functions use fn and rev\nfn add(a, b) {\n  rev a + b\n}\n\npt("Result: ${add(5, 7)}")' },
+  { id: '4', name: 'loops', content: '// Loops with lp\nx = 0\nlp x < 3 {\n  pt("Iteration ${x}")\n  x = x + 1\n}' },
+  { id: '5', name: 'conditionals', content: '// Conditionals\nage = 20\nif age >= 18 {\n  pt("Adult")\n} el {\n  pt("Minor")\n}' },
+  { id: '6', name: 'error_handling', content: '// Try-err blocks\ntry {\n  pt("Attempting risky operation...")\n  err "Simulation failed!"\n} err(e) {\n  pt("Caught: ${e}")\n}' },
 ]
 
 export default function VcomPage() {
@@ -24,8 +25,28 @@ export default function VcomPage() {
   const [output, setOutput] = useState("")
   const [isWasmReady, setIsWasmReady] = useState(false)
 
-  // Try to load user's last edited code
+  const hasInitialized = React.useRef(false);
+
+  // Try to load code from URL first, then fallback to local storage
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const cParam = params.get('c');
+    if (cParam) {
+      const decompressed = decompressFromEncodedURIComponent(cParam);
+      if (decompressed) {
+        setContent(decompressed);
+        setActivePresetId(''); // Set to empty for custom docs snippet
+        // Clean URL to prevent staying on huge query param string
+        setTimeout(() => {
+          window.history.replaceState({}, '', '/vcom');
+        }, 100);
+        return;
+      }
+    }
+
     const saved = localStorage.getItem('drylang-vcom-code')
     if (saved) {
       setContent(saved)
@@ -142,6 +163,7 @@ export default function VcomPage() {
                     cursor: 'pointer'
                   }}
                 >
+                  <option value="" disabled style={{ display: 'none' }}>Custom Code</option>
                   {PRESETS.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}

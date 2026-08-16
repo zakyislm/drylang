@@ -1,0 +1,17 @@
+# WebSockets (`ws`)
+
+dryLang natively upgrades HTTP connections to real-time WebSockets instantly.
+
+```rust
+fn ws_handler(conn) {
+    // Wait for messages from client
+    msg = ws.read(conn)
+    
+    // Echo it back
+    ws.write(conn, "Server says: ${msg}")
+}
+
+// Attach the websocket handler to a route inside your HTTP server
+rt.add("/socket", ws_handler)
+op(8080, rt.serve, "mul", 100)
+```

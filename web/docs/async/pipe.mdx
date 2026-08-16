@@ -1,0 +1,24 @@
+# Data Streaming (`pipe`)
+
+For advanced concurrency, `pipe` allows different goroutines to pass data to each other safely without locking.
+
+## Create a Pipe
+```rust
+p = pipe.make()
+```
+
+## Send and Receive
+Pipes block until both sender and receiver are ready.
+
+```rust
+asn fn producer(p) {
+    pipe.send(p, "Hello from producer!")
+}
+
+p = pipe.make()
+uni producer(p)
+
+// Blocks until producer sends data
+msg = pipe.recv(p)
+pt(msg) // "Hello from producer!"
+```

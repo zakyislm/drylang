@@ -1,0 +1,36 @@
+# Arrow Functions
+
+For simple logic, standard functions can be too verbose. dryLang supports JavaScript-style arrow functions using `->`.
+
+## Single Parameter
+```rust
+f = x -> x * 2
+pt(f(4)) // 8
+```
+
+## Multiple Parameters
+```rust
+add2 = (a, b) -> a + b
+pt(add2(2, 3)) // 5
+```
+
+## Block Body
+If your arrow function requires multiple lines, wrap the body in braces `{}` and explicitly use `rev` to return.
+```rust
+f2 = x -> {
+    y = x * 2
+    rev y + 1
+}
+pt(f2(5)) // 11
+```
+
+## Passing as Arguments (Callbacks)
+Arrow functions are perfect for passing logic as arguments into other functions.
+
+```rust
+fn apply(f, v) { 
+    rev f(v) 
+}
+
+pt(apply(x -> x + 1, 10)) // 11
+```

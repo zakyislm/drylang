@@ -1,6 +1,9 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
+import { compressToEncodedURIComponent } from 'lz-string';
+import { Play } from 'iconoir-react';
 
 function highlightDryLang(code: string) {
   let html = code
@@ -46,7 +49,7 @@ export function CodeBlock({ node, className, children, ...props }: any) {
       <code className={className} {...props} style={{
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
         padding: '0.2rem 0.4rem',
-        borderRadius: '4px',
+        borderRadius: '0',
         fontSize: '0.9em'
       }}>
         {children}
@@ -83,14 +86,47 @@ export function CodeBlock({ node, className, children, ...props }: any) {
         position: 'absolute',
         top: 0,
         right: 0,
-        background: 'rgba(255, 255, 255, 0.05)',
-        padding: '0.2rem 0.6rem',
-        borderRadius: '0',
-        fontSize: '0.75rem',
-        color: '#aaa',
-        fontWeight: 600,
+        display: 'flex',
+        alignItems: 'stretch',
       }}>
-        {displayLanguage}
+        {displayLanguage === 'drylang' && (
+          <Link 
+            href={`/vcom?c=${compressToEncodedURIComponent(codeStr)}`}
+            title="Run in Playground"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: '#aaa',
+              padding: '0.2rem 0.6rem',
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+              borderRight: '1px solid rgba(255,255,255,0.05)',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = '#000';
+              e.currentTarget.style.background = '#20A86A';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = '#aaa';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            }}
+          >
+            <Play width={14} height={14} strokeWidth={2.5} />
+          </Link>
+        )}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          background: 'rgba(255, 255, 255, 0.05)',
+          padding: '0.2rem 0.6rem',
+          fontSize: '0.75rem',
+          color: '#aaa',
+          fontWeight: 600,
+        }}>
+          {displayLanguage}
+        </div>
       </div>
       <pre style={{ margin: 0, padding: '1.5rem', overflowX: 'auto', background: 'transparent', border: 'none', borderRadius: 0 }}>
         <code

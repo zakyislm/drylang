@@ -1,0 +1,27 @@
+# I/O & File System
+
+Reading from and writing to the outside world is minimized to single characters.
+
+## Print (`pt`)
+Prints to standard output.
+```rust
+pt("Hello world")
+```
+
+## User Input (`in`)
+Prompts the user and reads from stdin.
+```rust
+name = in("Enter name: ")
+```
+
+## Read File (`r`)
+Reads the entire contents of a file into a string.
+```rust
+content = r("config.json")
+```
+
+## Write File (`w`)
+Writes a string to a file, overwriting existing content.
+```rust
+w("log.txt", "Server started")
+```

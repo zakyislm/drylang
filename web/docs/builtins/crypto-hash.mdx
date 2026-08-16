@@ -1,0 +1,20 @@
+# Hashing & Crypto (`hash`, `enc`)
+
+Secure hashing is built directly into dryLang.
+
+## MD5
+```rust
+hash.md5("abc") // "900150983cd24fb0d6963f7d28e17f72"
+```
+
+## Bcrypt (Passwords)
+```rust
+h = hash.bcrypt("password") 
+is_valid = hash.fit("bcrypt", "password", h) // t
+```
+
+## Encoding (Base64 & Hex)
+```rust
+enc.b64("hello") // "aGVsbG8="
+enc.hex("ab")    // "6162"
+```

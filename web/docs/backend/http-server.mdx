@@ -1,0 +1,19 @@
+# HTTP Server (`op`)
+
+dryLang features a highly optimized native HTTP server out of the box.
+
+To start it, use the `op` command, providing the port, a handler function, processing mode, and maximum connections.
+
+```rust
+fn handle_request(req) {
+    rev {"status": 200, "body": "dryLang Backend is Running"}
+}
+
+// Start on Port 8080
+// Handler: handle_request
+// Mode: "mul" (Multithreading)
+// Max Connections: 100
+op(8080, handle_request, "mul", 100)
+```
+
+The server includes graceful shutdown support and protects against slow-loris attacks automatically via internal timeouts.

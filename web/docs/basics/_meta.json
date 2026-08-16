@@ -1,0 +1,13 @@
+{
+  "index": "Overview",
+  "comments": "Comments",
+  "variables": "Variables",
+  "constants": "Constants",
+  "data-types": "Data Types",
+  "numbers": "Numbers",
+  "strings": "Strings",
+  "string-interpolation": "String Interpolation",
+  "booleans-unknown": "Booleans & Unknown",
+  "operators": "Operators",
+  "type-checking": "Type Checking"
+}

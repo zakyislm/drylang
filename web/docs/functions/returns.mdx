@@ -1,0 +1,19 @@
+# Returning Values (`rev`)
+
+In dryLang, `return` is shortened to `rev`.
+
+```rust
+fn isEven(n) {
+    if (n % 2 = 0) { 
+        rev t 
+    }
+    rev f
+}
+```
+
+When an arrow function has no block braces `{}` (just an expression), the `rev` is implicit.
+
+```rust
+// Implicit return
+multiply = (a, b) -> a * b
+```

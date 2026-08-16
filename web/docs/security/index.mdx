@@ -1,0 +1,7 @@
+# Sandbox Security Overview
+
+Because dryLang comes with extreme power natively (like HTTP servers and OS command execution), it is built with **default-deny** security.
+
+By default, dangerous built-ins are completely locked in production. You must explicitly allow them via environment variables.
+
+This ensures that dryLang scripts downloaded from the internet cannot maliciously destroy your server unless you explicitly grant them permission.

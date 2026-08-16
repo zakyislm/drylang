@@ -1,0 +1,37 @@
+# System & Environment (`sys`)
+
+The standard library includes powerful ways to interact with the underlying OS.
+
+## Environment Variables (`env`)
+Read environment variables.
+```rust
+port = env("PORT") ?? "8080"
+```
+
+## OS Commands (`cmd`)
+Execute bash commands directly natively. (Requires `DRY_ALLOW_CMD`).
+```rust
+res = cmd("ls -la")
+pt(res)
+```
+
+## Directory Listing (`dir`)
+Reads all files in a folder into an array.
+```rust
+files = dir("./images")
+```
+
+## OS Information (`sys.os`)
+Returns OS platform info.
+```rust
+pt(sys.os()) // e.g. "windows", "linux", "darwin"
+```
+
+## Exit Process (`die`)
+Kill the script immediately with a specific exit code.
+```rust
+if (err) {
+    pt("Fatal Error")
+    die(1)
+}
+```

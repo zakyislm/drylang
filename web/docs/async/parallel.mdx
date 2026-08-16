@@ -1,0 +1,17 @@
+# Multiple Async Execution (`mul`)
+
+The `mul` statement is designed to spawn multiple concurrent instances of an async function instantly.
+
+```rust
+asn fn fetch_data(id) {
+    pt("Fetching data for ID: ${id}")
+}
+
+// Spawns 10 parallel goroutines!
+mul 10 fetch_data(i)
+```
+
+## How `mul` works:
+1. It takes a count (e.g., `10`).
+2. It automatically injects an `i` variable representing the current index (0 to 9).
+3. It spawns the specified `asn` function that many times in complete parallel.

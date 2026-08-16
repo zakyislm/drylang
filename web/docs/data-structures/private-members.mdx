@@ -8,4 +8,19 @@ pv cl Internal {
         rev "hidden"
     }
 }
+
+// Instantiating Internal is allowed within the same file/module!
+inst = Internal()
+
+// But trying to instantiate `Internal` from another file will result in a compiler error.
+```
+
+You can also use `pv` to hide internal struct/class fields or class methods from being accessed from outside the struct/class scope:
+```rust
+cl BankAccount {
+    pv balance           // Private field
+    pv fn auth() { ... } // Private method
+    
+    fn init() { this.balance = 0 }
+}
 ```

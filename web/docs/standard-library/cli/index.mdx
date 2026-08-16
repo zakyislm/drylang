@@ -1,0 +1,10 @@
+# CLI Flags (`flag`)
+
+For building command-line tools in dryLang, parsing arguments is seamless.
+
+```rust
+// Run script with: dry script.dry --port 8080 --silent
+
+p = flag("port")   // "8080"
+s = flag("silent") // "t" (present without value defaults to true boolean string representation)
+```

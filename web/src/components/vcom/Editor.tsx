@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import Editor, { Monaco } from '@monaco-editor/react';
+import Editor, { Monaco, loader } from '@monaco-editor/react';
+
+// Both jsdelivr and unpkg are often blocked by ISPs in Indonesia.
+// cdnjs is backed by Cloudflare and almost never gets blocked.
+loader.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' } });
 
 interface VcomEditorProps {
   code: string;

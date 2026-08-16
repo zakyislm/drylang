@@ -1,0 +1,23 @@
+# Await (`awt`)
+
+Once you have launched background tasks using `mul` or `uni`, your main program will continue executing without waiting for them to finish.
+
+If you need to wait until **all** currently pending async tasks are completed before moving on, use the `awt` keyword.
+
+```rust
+asn fn worker(id) {
+    // some heavy work
+}
+
+mul 5 worker(i)
+uni worker(99)
+
+pt("Tasks are running in the background...")
+
+// Wait until all 6 workers are completely done
+awt
+
+pt("All tasks finished!")
+```
+
+`awt` acts as a global sync barrier for your async calls.

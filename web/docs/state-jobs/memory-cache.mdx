@@ -1,0 +1,11 @@
+# Memory Cache (`mem.set`)
+
+You can set values directly into RAM with an automatic Time-To-Live (TTL) expiration using `mem.set`.
+
+```rust
+// Set key 'api_limit' to 100, expires in 60 seconds
+mem.set("api_limit", 100, 60)
+
+// Retrieve the value
+val = mem.get("api_limit")
+```
